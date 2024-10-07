@@ -15,6 +15,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 set(msg_files
 	"msg/Flight.msg"
+	"msg/ListaAviones.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -24,22 +25,17 @@ ament_export_dependencies(rosidl_default_runtime)
 
 find_package(rclcpp REQUIRED)
 
-add_executable(avion src/avion.cpp)
-ament_target_dependencies(avion rclcpp)
-
-add_executable(lista_aviones src/lista_aviones.cpp)
-ament_target_dependencies(lista_aviones rclcpp)
+add_executable(aeropuerto src/aeropuerto.cpp src/avion.cpp)
+ament_target_dependencies(aeropuerto rclcpp)
 
 install(TARGETS
-    avion
-    lista_aviones
+    aeropuerto
   DESTINATION lib/${PROJECT_NAME})
   
 rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} rosidl_typesupport_cpp)
 
-target_link_libraries(avion "${cpp_typesupport_target}")
-target_link_libraries(lista_aviones "${cpp_typesupport_target}")
+target_link_libraries(aeropuerto "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
