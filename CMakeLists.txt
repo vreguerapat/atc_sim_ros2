@@ -12,6 +12,8 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 #find_package(std_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
 
 set(msg_files
 	"msg/Flight.msg"
@@ -26,7 +28,7 @@ ament_export_dependencies(rosidl_default_runtime)
 find_package(rclcpp REQUIRED)
 
 add_executable(aeropuerto src/aeropuerto.cpp src/avion.cpp)
-ament_target_dependencies(aeropuerto rclcpp)
+ament_target_dependencies(aeropuerto rclcpp geometry_msgs tf2)
 
 install(TARGETS
     aeropuerto

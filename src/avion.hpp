@@ -15,14 +15,16 @@ class Avion {
         double getPosY() const;
         double getPosZ() const;
         double getSpeed() const;
+        double getBearing() const;
 
     private:
         std::string id_;
         std::string airline_;
-        double posx_, posy_, posz_, speed_;
+        double posx_, posy_, posz_, speed_, bearing_;
 
         std::string generateRandomID();
         double generateRandomPosition();
+        double generateRandomBearing();
 };
 
 #endif
