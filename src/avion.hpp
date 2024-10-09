@@ -17,6 +17,8 @@ class Avion {
         double getSpeed() const;
         double getBearing() const;
 
+        void update(double delta_time); //Método para actualizar posicion aviones
+
     private:
         std::string id_;
         std::string airline_;

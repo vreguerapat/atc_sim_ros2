@@ -8,7 +8,7 @@ Avion::Avion()
     posx_ = generateRandomPosition();
     posy_ = generateRandomPosition();
     posz_ = generateRandomPosition();
-    speed_ = 200.0;
+    speed_ = 10.0;
     bearing_ =generateRandomBearing();
 }
 
@@ -39,3 +39,12 @@ double Avion::generateRandomBearing()
 {
     return static_cast<double>(rand()) / (static_cast<double>(RAND_MAX)) * 2 * M_PI;
 } 
+
+//Método para actualizar la posicion
+void Avion::update(double delta_time)
+{
+    double distance = speed_ * delta_time;
+
+    posx_ += distance * std::cos(bearing_);
+    posy_ += distance * std::sin(bearing_);
+}

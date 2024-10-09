@@ -17,22 +17,45 @@ class Aeropuerto : public rclcpp::Node
             //Se publica el mensaje lista_aviones
             lista_aviones_publisher_ = this->create_publisher<atc_sim_ros2::msg::ListaAviones>("lista_aviones",10);
             pose_array_pub_= this->create_publisher<geometry_msgs::msg::PoseArray>("pose_topic", 10);
-            //Agregar avion cada 10 segundos
-            timer_ = this->create_wall_timer( 10s, [this]() { agregarAvion(); });
+
+            update_timer_ = this->create_wall_timer( 1s, [this]() { update_airport(0.01); });
+
+            show_timer_ = this->create_wall_timer(1s, [this]() {show_airport();});
+
+            avion_timer_= this->create_wall_timer(5s, [this]() {agregarAvion();});
         }
-    
-    private:
+
         //Funcion para agregar nuevo avion
         void agregarAvion()
         {
             Avion nuevo_avion;
             lista_aviones_.push_back(nuevo_avion);
+            RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
+        }
+    
+    private:
+        //Variables privadas
+        rclcpp::Publisher<atc_sim_ros2::msg::ListaAviones>::SharedPtr lista_aviones_publisher_;
+        rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pose_array_pub_;
+        rclcpp::TimerBase::SharedPtr update_timer_;
+        rclcpp::TimerBase::SharedPtr show_timer_;
+        rclcpp::TimerBase::SharedPtr avion_timer_;
+        std::vector<Avion> lista_aviones_;
 
+        void update_airport(double delta_time)
+        {
+            for(auto &avion : lista_aviones_){
+                avion.update(delta_time);
+            }
+        }
+
+        void show_airport()
+        {
             //Hay que crear el mensaje del nuevo avion
             atc_sim_ros2::msg::ListaAviones msg_lista;
 
             geometry_msgs::msg::PoseArray pose_array;
-            pose_array.header.frame_id ="map";
+            pose_array.header.frame_id = "map";
             pose_array.header.stamp = this->now();
 
             RCLCPP_INFO(this->get_logger(), "Publicando lista de %zu aviones", lista_aviones_.size());
@@ -80,11 +103,6 @@ class Aeropuerto : public rclcpp::Node
             lista_aviones_publisher_->publish(msg_lista);
         }
 
-        //Variables privadas
-        rclcpp::Publisher<atc_sim_ros2::msg::ListaAviones>::SharedPtr lista_aviones_publisher_;
-        rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pose_array_pub_;
-        rclcpp::TimerBase::SharedPtr timer_;
-        std::vector<Avion> lista_aviones_;
 
 };
 
