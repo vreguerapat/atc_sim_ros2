@@ -14,6 +14,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 set(msg_files
 	"msg/Flight.msg"
@@ -28,16 +29,23 @@ ament_export_dependencies(rosidl_default_runtime)
 find_package(rclcpp REQUIRED)
 
 add_executable(aeropuerto src/aeropuerto.cpp src/avion.cpp)
-ament_target_dependencies(aeropuerto rclcpp geometry_msgs tf2)
+ament_target_dependencies(aeropuerto rclcpp geometry_msgs tf2 visualization_msgs)
 
+#Compilar visualizador
+add_executable(visualizador src/visualizador.cpp)
+ament_target_dependencies(visualizador rclcpp geometry_msgs tf2 visualization_msgs)
+
+#Instalar nodos
 install(TARGETS
     aeropuerto
+    visualizador
   DESTINATION lib/${PROJECT_NAME})
   
 rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} rosidl_typesupport_cpp)
 
 target_link_libraries(aeropuerto "${cpp_typesupport_target}")
+target_link_libraries(visualizador "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -16,16 +16,18 @@ class Avion {
         double getPosZ() const;
         double getSpeed() const;
         double getBearing() const;
+        double getElevationAngle() const;
 
-        void update(double delta_time); //Método para actualizar posicion aviones
+        void update(double delta_time, double waypoint_x, double waypoint_y, double waypoint_z); //Método para actualizar posicion aviones
 
     private:
         std::string id_;
         std::string airline_;
-        double posx_, posy_, posz_, speed_, bearing_;
+        double posx_, posy_, posz_, speed_, bearing_, elevation_angle_;
+        bool reached_waypoint_;
 
         std::string generateRandomID();
-        double generateRandomPosition();
+        double generateRandomPosition(bool margins);
         double generateRandomBearing();
 };
 

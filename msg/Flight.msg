@@ -5,3 +5,4 @@ float64 posy
 float64 posz
 float64 speed
 float64 bearing
+float64 elevation_angle
