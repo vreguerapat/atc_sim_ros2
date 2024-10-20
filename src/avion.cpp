@@ -1,5 +1,6 @@
 #include "avion.hpp"
 #include <cmath>
+#include "rclcpp/rclcpp.hpp"
 
 Avion::Avion() 
 {
@@ -20,6 +21,7 @@ double Avion::getPosY() const { return posy_; }
 double Avion::getPosZ() const { return posz_; }
 double Avion::getSpeed() const { return speed_; }
 double Avion::getBearing() const { return bearing_; }
+
 
 //Funcion que genera de manera aleatoria el ID entre 1000 - 9999
 std::string Avion::generateRandomID()
@@ -54,13 +56,22 @@ double Avion::generateRandomBearing()
     return static_cast<double>(rand()) / (static_cast<double>(RAND_MAX)) * 2 * M_PI;
 } 
 
+// Funcion para seleccionar waypoint aleatorio
+void Avion::selectRandomWaypoint(const std::vector<std::array<float, 3>>& waypoints)
+{
+    int selected_waypoint = rand() % waypoints.size();
+    target_waypoint_ = waypoints[selected_waypoint];
+
+    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint %d", id_.c_str(), selected_waypoint);
+}
+
 // Metodo para actualizar la posicion
-void Avion::update(double delta_time, double waypoint_x, double waypoint_y, double waypoint_z)
+void Avion::update(double delta_time)
 {
     // Primero se calcula el angulo hacia el waypoint
-    double dx = waypoint_x - posx_;
-    double dy = waypoint_y - posy_;
-    double dz = waypoint_z - posz_;
+    double dx = target_waypoint_[0] - posx_;
+    double dy = target_waypoint_[1] - posy_;
+    double dz = target_waypoint_[2] - posz_;
     double distance_to_waypoint = std::sqrt(dx * dx + dy * dy + dz * dz);
 
     if (!reached_waypoint_){
@@ -87,7 +98,7 @@ void Avion::update(double delta_time, double waypoint_x, double waypoint_y, doub
 
             double climb_rate = 1.0 * delta_time;
             if (std::abs(dz) < climb_rate) {
-                posz_ = waypoint_z;
+                posz_ = target_waypoint_[2];
             } else {
                 posz_ += (dz > 0 ? climb_rate : -climb_rate);
             }

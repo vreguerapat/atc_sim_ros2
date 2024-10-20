@@ -25,6 +25,14 @@ class Aeropuerto : public rclcpp::Node
         void agregarAvion()
         {
             Avion nuevo_avion;
+            // Waypoints disponibles
+            std::vector<std::array<float, 3>> waypoints = {
+                {0.0, 0.0, 5.0},
+                {5.0, 5.0, 5.0}
+            };
+
+            // Se le asigna waypoint aleatorio
+            nuevo_avion.selectRandomWaypoint(waypoints);
             lista_aviones_.push_back(nuevo_avion);
             RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
         }
@@ -35,18 +43,23 @@ class Aeropuerto : public rclcpp::Node
         rclcpp::TimerBase::SharedPtr update_timer_;
         rclcpp::TimerBase::SharedPtr avion_timer_;
         std::vector<Avion> lista_aviones_;
+        // Vector de waypoints, cada uno con coord. x y z
+        std::vector<std::array<float,3>> waypoints_ = {
+            {0.0, 0.0, 5.0},
+            {5.0, 5.0, 5.0}
+        };
 
         void update_airport(double delta_time)
         {
             // Coordenadas del waypoint
-            double waypoint_x = 0.0;
-            double waypoint_y = 0.0;
-            double waypoint_z = 5.0;
+            double waypoint_x = waypoints_[0][0];
+            double waypoint_y = waypoints_[0][1];
+            double waypoint_z = waypoints_[0][2];
             //Hay que crear el mensaje del nuevo avion
             atc_sim_ros2::msg::ListaAviones msg_lista;
 
             for(auto &avion : lista_aviones_){
-                avion.update(delta_time, waypoint_x, waypoint_y, waypoint_z);
+                avion.update(delta_time);
 
                 atc_sim_ros2::msg::Flight avion_msg;
                 avion_msg.id = avion.getID();
