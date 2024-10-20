@@ -51,10 +51,7 @@ class Aeropuerto : public rclcpp::Node
 
         void update_airport(double delta_time)
         {
-            // Coordenadas del waypoint
-            double waypoint_x = waypoints_[0][0];
-            double waypoint_y = waypoints_[0][1];
-            double waypoint_z = waypoints_[0][2];
+            
             //Hay que crear el mensaje del nuevo avion
             atc_sim_ros2::msg::ListaAviones msg_lista;
 

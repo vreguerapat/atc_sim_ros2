@@ -4,8 +4,9 @@
 
 Avion::Avion() 
 {
+    
+    airline_ = assignRandomAirline();
     id_ = generateRandomID();
-    airline_ = "Iberia";
     posx_ = generateRandomPosition(true);
     posy_ = generateRandomPosition(true);
     posz_ = generateRandomPosition(false);
@@ -23,12 +24,35 @@ double Avion::getSpeed() const { return speed_; }
 double Avion::getBearing() const { return bearing_; }
 
 
-//Funcion que genera de manera aleatoria el ID entre 1000 - 9999
+std::string Avion::assignRandomAirline() {
+    std::vector<std::string> airlines = {
+        "Ryanair", "Iberia", "Air France", "British Airways", "Vueling"
+    };
+
+    int random_index = rand() % airlines.size();
+    return airlines[random_index];
+}
+
+//Funcion que genera de manera aleatoria el ID
 std::string Avion::generateRandomID()
 {
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
-    int random_id = 1000 + std::rand() % 9000;
-    return std::to_string(random_id);
+    std::string prefix;
+    // Asigna prefijo segun aerolinea
+    if (airline_ == "Iberia") {
+        prefix = "IB";
+    } else if (airline_ == "Ryanair") {
+        prefix = "RY";
+    } else if (airline_ == "British Airways") {
+        prefix = "BA";
+    } else if (airline_ == "Air France") {
+        prefix = "AF";
+    } else if (airline_ == "Vueling") {
+        prefix = "VL";
+    }
+
+    int random_id = rand() % 900 + 100;
+    
+    return prefix + std::to_string(random_id);
 }
 
 //Funcion para que los aviones se generen en los margenes que se establezcan

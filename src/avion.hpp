@@ -18,6 +18,7 @@ class Avion {
         double getPosZ() const;
         double getSpeed() const;
         double getBearing() const;
+        
         void selectRandomWaypoint(const std::vector<std::array<float, 3>>& waypoints) ;
         void update(double delta_time); //Método para actualizar posicion aviones
 
@@ -31,6 +32,7 @@ class Avion {
         std::string generateRandomID();
         double generateRandomPosition(bool margins);
         double generateRandomBearing();
+        std::string assignRandomAirline();
 };
 
 #endif

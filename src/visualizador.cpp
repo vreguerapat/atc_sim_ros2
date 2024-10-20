@@ -93,52 +93,29 @@ class Visualizador : public rclcpp::Node{
                 marker.pose.orientation.z = q.z();
                 marker.pose.orientation.w = q.w();
                 marker_array.markers.push_back(marker);
+
+                // Marcador de texto para id avion
+                visualization_msgs::msg::Marker text_marker;
+                text_marker.header.frame_id = "map";
+                text_marker.header.stamp = this->now();
+                text_marker.ns = "aviones_texto";
+                text_marker.id = id++;
+                text_marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+                text_marker.action = visualization_msgs::msg::Marker::ADD;
+                text_marker.scale.z = 0.5;
+                text_marker.color.a = 1.0;
+                text_marker.color.r =1.0;
+                text_marker.color.g = 1.0;
+                text_marker.color.b = 1.0;
+                text_marker.lifetime = rclcpp::Duration(1s);
+
+                text_marker.pose.position.x = avion_msg.posx;
+                text_marker.pose.position.y = avion_msg.posy;
+                text_marker.pose.position.z = avion_msg.posz + 0.5;
+                text_marker.text = avion_msg.id;
+                marker_array.markers.push_back(text_marker);
                 
             }
-
-           /* // Se crea un waypoint, cilindro verde
-            visualization_msgs::msg::Marker waypoint_marker1;
-            waypoint_marker1.header.frame_id = "map";
-            waypoint_marker1.header.stamp = this->now();
-            waypoint_marker1.ns = "waypoints";
-            waypoint_marker1.id = id++;
-            waypoint_marker1.type = visualization_msgs::msg::Marker::CYLINDER;
-            waypoint_marker1.action = visualization_msgs::msg::Marker::ADD;
-            waypoint_marker1.scale.x = 0.5;
-            waypoint_marker1.scale.y = 0.5;
-            waypoint_marker1.scale.z = 0.5;
-            waypoint_marker1.color.a = 1.0;
-            waypoint_marker1.color.g = 1.0;
-            waypoint_marker1.color.r = 0.0;
-            waypoint_marker1.color.b = 0.0;
-            waypoint_marker1.pose.position.x = waypoints_[0][0];
-            waypoint_marker1.pose.position.y = waypoints_[0][1];
-            waypoint_marker1.pose.position.z = waypoints_[0][2];
-            waypoint_marker1.lifetime = rclcpp::Duration(1s);
-
-            marker_array.markers.push_back(waypoint_marker1);
-
-            visualization_msgs::msg::Marker waypoint_marker2;
-            waypoint_marker2.header.frame_id = "map";
-            waypoint_marker2.header.stamp = this->now();
-            waypoint_marker2.ns = "waypoints";
-            waypoint_marker2.id = id++;
-            waypoint_marker2.type = visualization_msgs::msg::Marker::CYLINDER;
-            waypoint_marker2.action = visualization_msgs::msg::Marker::ADD;
-            waypoint_marker2.scale.x = 0.5;
-            waypoint_marker2.scale.y = 0.5;
-            waypoint_marker2.scale.z = 0.5;
-            waypoint_marker2.color.a = 1.0;
-            waypoint_marker2.color.g = 1.0;
-            waypoint_marker2.color.r = 0.0;
-            waypoint_marker2.color.b = 0.0;
-            waypoint_marker2.pose.position.x = waypoints_[1][0];
-            waypoint_marker2.pose.position.y = waypoints_[1][1];
-            waypoint_marker2.pose.position.z = waypoints_[1][2];
-            waypoint_marker2.lifetime = rclcpp::Duration(1s);
-
-            marker_array.markers.push_back(waypoint_marker2);
-            */
 
 
             RCLCPP_INFO(this->get_logger(), "Publicando %zu markers", marker_array.markers.size());
