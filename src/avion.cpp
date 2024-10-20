@@ -10,7 +10,6 @@ Avion::Avion()
     posz_ = generateRandomPosition(false);
     speed_ = 10.0;
     bearing_ =generateRandomBearing();
-    elevation_angle_ = 0.0;
     reached_waypoint_ = false;
 }
 
@@ -21,7 +20,6 @@ double Avion::getPosY() const { return posy_; }
 double Avion::getPosZ() const { return posz_; }
 double Avion::getSpeed() const { return speed_; }
 double Avion::getBearing() const { return bearing_; }
-double Avion::getElevationAngle() const { return elevation_angle_; ;}
 
 //Funcion que genera de manera aleatoria el ID entre 1000 - 9999
 std::string Avion::generateRandomID()
@@ -74,14 +72,7 @@ void Avion::update(double delta_time, double waypoint_x, double waypoint_y, doub
         } else {
             // Bearing objetivo
             double target_bearing = std::atan2(dy, dx);
-
-            // Angulo elevacion
-            double distance_xy = std::sqrt(dx * dx + dy * dy);
-            double target_elevation_angle = std::atan2(dz, distance_xy);
-
-            // Se establece un valor max para el angulo
-            double max_elevation_angle = M_PI / 3;
-            target_elevation_angle = std::max(-max_elevation_angle, std::min(target_elevation_angle,max_elevation_angle));
+            
             // Se ajusta el angulo de manero gradual
             double angle_difference = target_bearing - bearing_;
             if (angle_difference > M_PI) angle_difference -= 2 * M_PI;
@@ -94,14 +85,13 @@ void Avion::update(double delta_time, double waypoint_x, double waypoint_y, doub
             bearing_ += (angle_difference > 0 ? rotation_speed : -rotation_speed);
             }
 
-            double elevation_angle_difference = target_elevation_angle - elevation_angle_;
-            double elevation_speed = 1;
-
-            if (std::abs(elevation_angle_difference) < elevation_speed) {
-                elevation_angle_ = target_elevation_angle;
+            double climb_rate = 1.0 * delta_time;
+            if (std::abs(dz) < climb_rate) {
+                posz_ = waypoint_z;
             } else {
-                elevation_angle_ += (elevation_angle_difference > 0 ? elevation_speed : -elevation_speed);
+                posz_ += (dz > 0 ? climb_rate : -climb_rate);
             }
+
 
         }
 
@@ -109,8 +99,7 @@ void Avion::update(double delta_time, double waypoint_x, double waypoint_y, doub
 
     double distance = speed_ * delta_time;
 
-    posx_ += distance * std::cos(bearing_) * std::cos(elevation_angle_);
-    posy_ += distance * std::sin(bearing_) * std::cos(elevation_angle_);
-    posz_ += distance * std::sin(elevation_angle_);
+    posx_ += distance * std::cos(bearing_);
+    posy_ += distance * std::sin(bearing_);
 }
 

@@ -49,7 +49,7 @@ class Visualizador : public rclcpp::Node{
                 marker.pose.position.y = avion_msg.posy;
                 marker.pose.position.z = avion_msg.posz;
                 tf2::Quaternion q;
-                q.setRPY( 0, avion_msg.bearing, avion_msg.elevation_angle);
+                q.setRPY( 0, 0, avion_msg.bearing);
                 marker.pose.orientation.x = q.x();
                 marker.pose.orientation.y = q.y();
                 marker.pose.orientation.z = q.z();
