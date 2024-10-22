@@ -28,13 +28,14 @@ ament_export_dependencies(rosidl_default_runtime)
 
 find_package(rclcpp REQUIRED)
 
-add_executable(aeropuerto src/aeropuerto.cpp src/avion.cpp)
+add_executable(aeropuerto src/main_aeropuerto.cpp src/aeropuerto.cpp src/avion.cpp)
 ament_target_dependencies(aeropuerto rclcpp geometry_msgs tf2 visualization_msgs)
 
 #Compilar visualizador
-add_executable(visualizador src/visualizador.cpp)
+add_executable(visualizador src/main_visualizador.cpp src/visualizador.cpp)
 ament_target_dependencies(visualizador rclcpp geometry_msgs tf2 visualization_msgs)
 
+include_directories(include)
 #Instalar nodos
 install(TARGETS
     aeropuerto
