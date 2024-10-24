@@ -25,7 +25,7 @@ void Visualizador::publicar_waypoints()
     RCLCPP_INFO(this->get_logger(), "Publicando waypoints");
     visualization_msgs::msg::MarkerArray marker_array;
     int id = 999;
-    for (size_t i = 0; i < waypoints_.size(); i++){
+    for (const auto& wp : waypoints_){
         visualization_msgs::msg::Marker waypoint_marker;
         waypoint_marker.header.frame_id = "map";
         waypoint_marker.header.stamp = this->now();
@@ -40,9 +40,9 @@ void Visualizador::publicar_waypoints()
         waypoint_marker.color.g = 1.0;
         waypoint_marker.color.r = 0.0;
         waypoint_marker.color.b = 0.0;
-        waypoint_marker.pose.position.x = waypoints_[i][0];
-        waypoint_marker.pose.position.y = waypoints_[i][1];
-        waypoint_marker.pose.position.z = waypoints_[i][2];
+        waypoint_marker.pose.position.x = wp[0];
+        waypoint_marker.pose.position.y = wp[1];
+        waypoint_marker.pose.position.z = wp[2];
         waypoint_marker.lifetime = rclcpp::Duration(1s);
 
         marker_array.markers.push_back(waypoint_marker);
@@ -55,6 +55,8 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
     // Se crea un marker array
     visualization_msgs::msg::MarkerArray marker_array;
     int id = 0;
+
+    publicar_waypoints();
             
     for (const auto &avion_msg : msg_lista->aviones)
     {
@@ -105,6 +107,8 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
         text_marker.pose.position.z = avion_msg.posz + 0.5;
         text_marker.text = avion_msg.id;
         marker_array.markers.push_back(text_marker);
+
+         
                 
     }
 

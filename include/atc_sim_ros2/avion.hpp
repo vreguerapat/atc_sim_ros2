@@ -6,6 +6,7 @@
 #include <ctime>
 #include <vector>
 #include <array>
+#include "atc_sim_ros2/msg/waypoint.hpp"
 
 class Avion {
     public:
@@ -18,8 +19,11 @@ class Avion {
         double getPosZ() const;
         double getSpeed() const;
         double getBearing() const;
+
+        void addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoints);
+        const std::vector<atc_sim_ros2::msg::Waypoint>& getWaypoints() const;
         
-        void selectRandomWaypoint(const std::vector<std::array<float, 3>>& waypoints) ;
+        void selectRandomWaypoint() ;
         void update(double delta_time); //Método para actualizar posicion aviones
 
     private:
@@ -27,7 +31,9 @@ class Avion {
         std::string airline_;
         double posx_, posy_, posz_, speed_, bearing_;
         bool reached_waypoint_;
-        std::array<float, 3> target_waypoint_;
+        atc_sim_ros2::msg::Waypoint target_waypoint_;
+
+        std::vector<atc_sim_ros2::msg::Waypoint> waypoints_;
 
         std::string generateRandomID();
         double generateRandomPosition(bool margins);

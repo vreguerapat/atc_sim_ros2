@@ -11,27 +11,49 @@ using namespace std::chrono_literals;
 
 Aeropuerto::Aeropuerto() : Node("aeropuerto")
 {
-    //Se publica el mensaje lista_aviones
+      //Se publica el mensaje lista_aviones
     lista_aviones_publisher_ = this->create_publisher<atc_sim_ros2::msg::ListaAviones>("lista_aviones",10);
            
     update_timer_ = this->create_wall_timer( 1s, [this]() { update_airport(0.01); });
 
     avion_timer_= this->create_wall_timer(30s, [this]() {agregarAvion();});
         
-    // Se inicializan los waypoints
-    waypoints_ = {
-        {0.0, 0.0, 5.0},
-        {5.0, 5.0, 5.0}
-    };
-
 }
+
 
 //Funcion para agregar nuevo avion
 void Aeropuerto::agregarAvion()
 {
     Avion nuevo_avion;
+
+    // Waypoints
+    std::vector<atc_sim_ros2::msg::Waypoint> wp;
+
+    atc_sim_ros2::msg::Waypoint waypoint1;
+    waypoint1.x = 0.0;
+    waypoint1.y = 0.0;
+    waypoint1.z = 5.0;
+
+    atc_sim_ros2::msg::Waypoint waypoint2;
+    waypoint2.x = 5.0;
+    waypoint2.y = 5.0;
+    waypoint2.z = 5.0;
+
+    wp.push_back(waypoint1);
+    wp.push_back(waypoint2);
+    nuevo_avion.addWaypoints(wp);
+
     // Se le asigna waypoint aleatorio
-    nuevo_avion.selectRandomWaypoint(waypoints_);
+    nuevo_avion.selectRandomWaypoint();
+    // Se agregan los waypoints al mensaje del avion
+    for (const auto& waypoint : waypoints_) {
+        atc_sim_ros2::msg::Waypoint wp;
+        wp.x = waypoint[0];
+        wp.y = waypoint[1];
+        wp.z = waypoint[2];
+        std::vector<atc_sim_ros2::msg::Waypoint> waypoints = {wp};
+        nuevo_avion.addWaypoints(waypoints);
+    }
     lista_aviones_.push_back(nuevo_avion);
     RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
 }
@@ -65,3 +87,4 @@ void Aeropuerto::update_airport(double delta_time)
 
     lista_aviones_publisher_->publish(msg_lista);
 }
+

@@ -21,6 +21,7 @@ class Aeropuerto : public rclcpp::Node {
         std::vector<Avion> lista_aviones_;
         std::vector<std::array<float,3>> waypoints_;
 
+
         void update_airport(double delta_time);
     
 };

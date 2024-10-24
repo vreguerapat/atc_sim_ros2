@@ -19,6 +19,7 @@ find_package(visualization_msgs REQUIRED)
 set(msg_files
 	"msg/Flight.msg"
 	"msg/ListaAviones.msg"
+	"msg/Waypoint.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

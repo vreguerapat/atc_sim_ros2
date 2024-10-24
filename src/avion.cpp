@@ -1,6 +1,8 @@
 #include "atc_sim_ros2/avion.hpp"
 #include <cmath>
 #include "rclcpp/rclcpp.hpp"
+#include "atc_sim_ros2/msg/waypoint.hpp"
+
 
 Avion::Avion() 
 {
@@ -23,6 +25,16 @@ double Avion::getPosZ() const { return posz_; }
 double Avion::getSpeed() const { return speed_; }
 double Avion::getBearing() const { return bearing_; }
 
+void Avion::addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoints) {
+    for (const auto& wp : waypoints) {
+        waypoints_.push_back(wp);
+    }
+    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints agregados: %zu ", waypoints_.size());
+}
+
+const std::vector<atc_sim_ros2::msg::Waypoint>& Avion::getWaypoints() const {
+        return waypoints_;
+}
 
 std::string Avion::assignRandomAirline() {
     std::vector<std::string> airlines = {
@@ -81,10 +93,16 @@ double Avion::generateRandomBearing()
 } 
 
 // Funcion para seleccionar waypoint aleatorio
-void Avion::selectRandomWaypoint(const std::vector<std::array<float, 3>>& waypoints)
+void Avion::selectRandomWaypoint()
 {
-    int selected_waypoint = rand() % waypoints.size();
-    target_waypoint_ = waypoints[selected_waypoint];
+    // Se verifica si hay waypoints disponibles
+    if (waypoints_.empty()) {
+        RCLCPP_WARN(rclcpp::get_logger("avion_logger"), "No hay waypoints disponibles");
+        return;
+    }
+    int selected_waypoint = rand() % waypoints_.size();
+    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Índice seleccionado: %d, Tamaño de waypoints: %zu", selected_waypoint, waypoints_.size());
+    target_waypoint_ = waypoints_[selected_waypoint];
 
     RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint %d", id_.c_str(), selected_waypoint);
 }
@@ -93,9 +111,9 @@ void Avion::selectRandomWaypoint(const std::vector<std::array<float, 3>>& waypoi
 void Avion::update(double delta_time)
 {
     // Primero se calcula el angulo hacia el waypoint
-    double dx = target_waypoint_[0] - posx_;
-    double dy = target_waypoint_[1] - posy_;
-    double dz = target_waypoint_[2] - posz_;
+    double dx = target_waypoint_.x - posx_;
+    double dy = target_waypoint_.y - posy_;
+    double dz = target_waypoint_.z - posz_;
     double distance_to_waypoint = std::sqrt(dx * dx + dy * dy + dz * dz);
 
     if (!reached_waypoint_){
@@ -122,7 +140,7 @@ void Avion::update(double delta_time)
 
             double climb_rate = 1.0 * delta_time;
             if (std::abs(dz) < climb_rate) {
-                posz_ = target_waypoint_[2];
+                posz_ = target_waypoint_.z;
             } else {
                 posz_ += (dz > 0 ? climb_rate : -climb_rate);
             }
