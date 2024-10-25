@@ -101,7 +101,7 @@ void Avion::selectRandomWaypoint()
         return;
     }
     int selected_waypoint = rand() % waypoints_.size();
-    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Índice seleccionado: %d, Tamaño de waypoints: %zu", selected_waypoint, waypoints_.size());
+    //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Índice seleccionado: %d, Tamaño de waypoints: %zu", selected_waypoint, waypoints_.size());
     target_waypoint_ = waypoints_[selected_waypoint];
 
     RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint %d", id_.c_str(), selected_waypoint);

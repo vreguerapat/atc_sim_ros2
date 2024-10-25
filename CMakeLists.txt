@@ -7,14 +7,11 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
-#find_package(std_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
 
 set(msg_files
 	"msg/Flight.msg"
@@ -27,8 +24,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 )
 ament_export_dependencies(rosidl_default_runtime)
 
-find_package(rclcpp REQUIRED)
-
+#Compilar aeropuerto
 add_executable(aeropuerto src/main_aeropuerto.cpp src/aeropuerto.cpp src/avion.cpp)
 ament_target_dependencies(aeropuerto rclcpp geometry_msgs tf2 visualization_msgs)
 
@@ -36,11 +32,16 @@ ament_target_dependencies(aeropuerto rclcpp geometry_msgs tf2 visualization_msgs
 add_executable(visualizador src/main_visualizador.cpp src/visualizador.cpp)
 ament_target_dependencies(visualizador rclcpp geometry_msgs tf2 visualization_msgs)
 
+#Compilar ATC
+add_executable(atc src/atc.cpp)
+ament_target_dependencies(atc rclcpp visualization_msgs)
+
 include_directories(include)
 #Instalar nodos
 install(TARGETS
     aeropuerto
     visualizador
+    atc
   DESTINATION lib/${PROJECT_NAME})
   
 rosidl_get_typesupport_target(cpp_typesupport_target
@@ -48,6 +49,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 
 target_link_libraries(aeropuerto "${cpp_typesupport_target}")
 target_link_libraries(visualizador "${cpp_typesupport_target}")
+target_link_libraries(atc "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

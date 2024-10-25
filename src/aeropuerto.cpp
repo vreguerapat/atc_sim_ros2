@@ -26,6 +26,7 @@ void Aeropuerto::agregarAvion()
 {
     Avion nuevo_avion;
 
+    RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
     // Waypoints
     std::vector<atc_sim_ros2::msg::Waypoint> wp;
 
@@ -55,7 +56,7 @@ void Aeropuerto::agregarAvion()
         nuevo_avion.addWaypoints(waypoints);
     }
     lista_aviones_.push_back(nuevo_avion);
-    RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
+    
 }
 
 void Aeropuerto::update_airport(double delta_time)
@@ -76,13 +77,13 @@ void Aeropuerto::update_airport(double delta_time)
 
         msg_lista.aviones.push_back(avion_msg);
 
-        std::cout << "ID: " << avion_msg.id
+        /*std::cout << "ID: " << avion_msg.id
                   << ", Airline: " << avion_msg.airline
                   << ", PosX: " << avion_msg.posx
                     << ", PosY: " << avion_msg.posy
                     << ", PosZ: " << avion_msg.posz
                     << ", Speed: " << avion_msg.speed
-                    << std::endl;    
+                    << std::endl;  */  
     }
 
     lista_aviones_publisher_->publish(msg_lista);

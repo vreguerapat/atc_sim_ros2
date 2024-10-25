@@ -22,7 +22,6 @@ Visualizador::Visualizador() : Node("visualizador")
 
 void Visualizador::publicar_waypoints()
 {
-    RCLCPP_INFO(this->get_logger(), "Publicando waypoints");
     visualization_msgs::msg::MarkerArray marker_array;
     int id = 999;
     for (const auto& wp : waypoints_){
@@ -112,8 +111,6 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
                 
     }
 
-
-    RCLCPP_INFO(this->get_logger(), "Publicando %zu markers", marker_array.markers.size());
     RCLCPP_INFO(this->get_logger(), "Recibidos %zu aviones", msg_lista->aviones.size());
     marker_pub_->publish(marker_array);
 }
