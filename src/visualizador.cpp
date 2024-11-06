@@ -14,8 +14,11 @@ Visualizador::Visualizador() : Node("visualizador")
     waypoint_marker_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("waypoints_marker", 10);
     timer_ = this->create_wall_timer( 1s, [this]() {publicar_waypoints();});
         
-    waypoints_ = {
+    /*waypoints_ = {
         {0.0, 0.0, 5.0},
+        {5.0, 5.0, 5.0}
+    };*/
+    waypoints_ = {
         {5.0, 5.0, 5.0}
     };
 }
@@ -107,7 +110,27 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
         text_marker.text = avion_msg.id;
         marker_array.markers.push_back(text_marker);
 
-         
+        visualization_msgs::msg::Marker line_strip;
+        line_strip.header.frame_id = "map";
+        line_strip.header.stamp = this->now();
+        line_strip.ns = "waypoints_lines";
+        line_strip.id = id++;
+        line_strip.type = visualization_msgs::msg::Marker::LINE_STRIP;
+        line_strip.scale.x = 0.1;
+        line_strip.color.a = 0.5;
+        line_strip.color.r = 0.0;
+        line_strip.color.g = 0.0;
+        line_strip.color.b = 1.0;
+
+        for (const auto& wp : avion_msg.waypoints) {
+            geometry_msgs::msg::Point p;
+            p.x = wp.x;
+            p.y = wp.y;
+            p.z = wp.z;
+            line_strip.points.push_back(p);
+        }         
+
+        marker_array.markers.push_back(line_strip);
                 
     }
 

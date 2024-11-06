@@ -24,6 +24,7 @@ class Avion {
         const std::vector<atc_sim_ros2::msg::Waypoint>& getWaypoints() const;
         
         void selectRandomWaypoint() ;
+        std::vector<atc_sim_ros2::msg::Waypoint> generateIntermediateWaypoints(const atc_sim_ros2::msg::Waypoint& start, const atc_sim_ros2::msg::Waypoint& end, int num_points) ;
         void update(double delta_time); //Método para actualizar posicion aviones
 
     private:
@@ -36,8 +37,8 @@ class Avion {
         std::vector<atc_sim_ros2::msg::Waypoint> waypoints_;
 
         std::string generateRandomID();
-        double generateRandomPosition(bool margins);
-        double generateRandomBearing();
+        double generateRandomPosition(bool margins, bool isAltitud);
+        double generateBearing();
         std::string assignRandomAirline();
 };
 

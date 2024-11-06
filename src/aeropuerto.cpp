@@ -27,34 +27,23 @@ void Aeropuerto::agregarAvion()
     Avion nuevo_avion;
 
     RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
-    // Waypoints
-    std::vector<atc_sim_ros2::msg::Waypoint> wp;
+    
+    // Posicion inicial del avion
+    atc_sim_ros2::msg::Waypoint start;
+    start.x = nuevo_avion.getPosX();
+    start.y = nuevo_avion.getPosY();
+    start.z = nuevo_avion.getPosZ();
 
-    atc_sim_ros2::msg::Waypoint waypoint1;
-    waypoint1.x = 0.0;
-    waypoint1.y = 0.0;
-    waypoint1.z = 5.0;
+    // Posicion punto final, fijo
+    atc_sim_ros2::msg::Waypoint end;
+    end.x = 5.0;
+    end.y = 5.0;
+    end.z = 5.0;
 
-    atc_sim_ros2::msg::Waypoint waypoint2;
-    waypoint2.x = 5.0;
-    waypoint2.y = 5.0;
-    waypoint2.z = 5.0;
+    // Generar 5 puntos intermedios
+    std::vector<atc_sim_ros2::msg::Waypoint> waypoints = nuevo_avion.generateIntermediateWaypoints(start, end, 2);
+    nuevo_avion.addWaypoints(waypoints);
 
-    wp.push_back(waypoint1);
-    wp.push_back(waypoint2);
-    nuevo_avion.addWaypoints(wp);
-
-    // Se le asigna waypoint aleatorio
-    nuevo_avion.selectRandomWaypoint();
-    // Se agregan los waypoints al mensaje del avion
-    for (const auto& waypoint : waypoints_) {
-        atc_sim_ros2::msg::Waypoint wp;
-        wp.x = waypoint[0];
-        wp.y = waypoint[1];
-        wp.z = waypoint[2];
-        std::vector<atc_sim_ros2::msg::Waypoint> waypoints = {wp};
-        nuevo_avion.addWaypoints(waypoints);
-    }
     lista_aviones_.push_back(nuevo_avion);
     
 }
@@ -77,13 +66,11 @@ void Aeropuerto::update_airport(double delta_time)
 
         msg_lista.aviones.push_back(avion_msg);
 
-        /*std::cout << "ID: " << avion_msg.id
-                  << ", Airline: " << avion_msg.airline
+        std::cout << "ID: " << avion_msg.id
                   << ", PosX: " << avion_msg.posx
                     << ", PosY: " << avion_msg.posy
                     << ", PosZ: " << avion_msg.posz
-                    << ", Speed: " << avion_msg.speed
-                    << std::endl;  */  
+                    << std::endl;  
     }
 
     lista_aviones_publisher_->publish(msg_lista);

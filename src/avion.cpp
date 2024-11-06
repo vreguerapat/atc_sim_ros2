@@ -1,7 +1,8 @@
 #include "atc_sim_ros2/avion.hpp"
-#include <cmath>
 #include "rclcpp/rclcpp.hpp"
 #include "atc_sim_ros2/msg/waypoint.hpp"
+#include <array>
+#include <cmath>
 
 
 Avion::Avion() 
@@ -9,11 +10,11 @@ Avion::Avion()
     
     airline_ = assignRandomAirline();
     id_ = generateRandomID();
-    posx_ = generateRandomPosition(true);
-    posy_ = generateRandomPosition(true);
-    posz_ = generateRandomPosition(false);
+    posx_ = generateRandomPosition(true, false);
+    posy_ = generateRandomPosition(true, false);
+    posz_ = generateRandomPosition(false, true);
     speed_ = 10.0;
-    bearing_ =generateRandomBearing();
+    bearing_ =generateBearing();
     reached_waypoint_ = false;
 }
 
@@ -68,28 +69,36 @@ std::string Avion::generateRandomID()
 }
 
 //Funcion para que los aviones se generen en los margenes que se establezcan
-double Avion::generateRandomPosition(bool margins)
+double Avion::generateRandomPosition(bool margins, bool isAltitud)
 {
     double random_value = static_cast<double>(rand()) / (static_cast<double>(RAND_MAX));
 
-    if (margins) {
-        if (random_value < 0.5) {
-        // Se genera en margen negativo
-        return -10.0 + (random_value * 1.0);
+    if(isAltitud) {
+        // En el caso de altitud que siempre se genere un valor positivo
+        return 1.0 + random_value * 5;
     } else {
-        // Se genera en margen positivo
-        return 9.0 + ((random_value - 0.5) * 1.0);
-    }
-    } else {
-        return -5.0 + random_value * 10.0;
+        if (margins) {
+            if (random_value < 0.5) {
+                // Se genera en margen negativo
+                return -20.0 + (random_value * 1.0);
+            } else {
+                // Se genera en margen positivo
+                return 20.0 + ((random_value - 0.5) * 1.0);
+            }
+        } else {
+            return -20.0 + random_value * 10.0;
+        }
     }
     
 }
 
-//Funcion que genera de manera aleatoria un valor entre 0 y 2pi
-double Avion::generateRandomBearing()
+//Funcion que calcula el angulo hacia el origen (0,0) 
+double Avion::generateBearing()
 {
-    return static_cast<double>(rand()) / (static_cast<double>(RAND_MAX)) * 2 * M_PI;
+    double dx = -posx_;
+    double dy = -posy_;
+
+    return std::atan2(dy, dx);
 } 
 
 // Funcion para seleccionar waypoint aleatorio
@@ -107,10 +116,37 @@ void Avion::selectRandomWaypoint()
     RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint %d", id_.c_str(), selected_waypoint);
 }
 
+// Funcion para generar waypoints intermedios
+std::vector<atc_sim_ros2::msg::Waypoint> Avion::generateIntermediateWaypoints(const atc_sim_ros2::msg::Waypoint& start, const atc_sim_ros2::msg::Waypoint& end, int num_points)
+{
+    std::vector<atc_sim_ros2::msg::Waypoint> intermediate_waypoints;
+
+    double step_x = (end.x - start.x) / (num_points + 1);
+    double step_y = (end.y - start.y) / (num_points + 1);
+    double step_z = (end.z - start.z) / (num_points + 1);
+
+    for (int i = 1; i <= num_points; i++) {
+        atc_sim_ros2::msg::Waypoint wp;
+        wp.x = start.x + step_x * i;
+        wp.y = start.y + step_y * i;
+        wp.z = start.z + step_z * i;
+        intermediate_waypoints.push_back(wp);
+
+        RCLCPP_INFO( rclcpp::get_logger("avion_logger"), "waypoint intermedio %d: {%.2f, %.2f, %.2f}", i, wp.x, wp.y, wp.z);
+    }
+    
+    return intermediate_waypoints;
+}
+
 // Metodo para actualizar la posicion
 void Avion::update(double delta_time)
 {
-    // Primero se calcula el angulo hacia el waypoint
+    if (!waypoints_.empty()) {
+        target_waypoint_ = waypoints_.front();
+        RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint en posicion {%.2f, %.2f, %.2f}", id_.c_str(), target_waypoint_.x, target_waypoint_.y, target_waypoint_.z);
+    }
+    
+   // Primero se calcula el angulo hacia el waypoint
     double dx = target_waypoint_.x - posx_;
     double dy = target_waypoint_.y - posy_;
     double dz = target_waypoint_.z - posz_;
@@ -120,13 +156,21 @@ void Avion::update(double delta_time)
         // Margen de distancia al waypoint
         double waypoint_threshold = 0.2;
 
+        RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Distance to waypoint: %.2f", distance_to_waypoint);
+
         if (distance_to_waypoint < waypoint_threshold) {
             reached_waypoint_ = true;
+
+            if (!waypoints_.empty()) {
+                waypoints_.erase(waypoints_.begin());
+                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoint reached. Remaining waypoints:%zu", waypoints_.size());
+                reached_waypoint_ = false;
+            }
+            
         } else {
             // Bearing objetivo
             double target_bearing = std::atan2(dy, dx);
-            
-            // Se ajusta el angulo de manero gradual
+            // Se ajusta el angulo de manera gradual
             double angle_difference = target_bearing - bearing_;
             if (angle_difference > M_PI) angle_difference -= 2 * M_PI;
             if (angle_difference < -M_PI) angle_difference += 2 * M_PI;
@@ -137,6 +181,7 @@ void Avion::update(double delta_time)
             } else {
             bearing_ += (angle_difference > 0 ? rotation_speed : -rotation_speed);
             }
+           //bearing_ += (std::abs(angle_difference) < rotation_speed) ? angle_difference : (angle_difference > 0 ? rotation_speed : -rotation_speed);
 
             double climb_rate = 1.0 * delta_time;
             if (std::abs(dz) < climb_rate) {
@@ -144,10 +189,8 @@ void Avion::update(double delta_time)
             } else {
                 posz_ += (dz > 0 ? climb_rate : -climb_rate);
             }
-
-
+           //posz_ += (std::abs(dz) < climb_rate) ? dz : (dz > 0 ? climb_rate : -climb_rate);
         }
-
     }
 
     double distance = speed_ * delta_time;
