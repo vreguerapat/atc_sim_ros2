@@ -58,7 +58,7 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
     visualization_msgs::msg::MarkerArray marker_array;
     int id = 0;
 
-    publicar_waypoints();
+    //publicar_waypoints();
             
     for (const auto &avion_msg : msg_lista->aviones)
     {
@@ -110,6 +110,7 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
         text_marker.text = avion_msg.id;
         marker_array.markers.push_back(text_marker);
 
+        RCLCPP_INFO(this->get_logger(), "Recibidos %zu waypoints", avion_msg.waypoints.size());
         visualization_msgs::msg::Marker line_strip;
         line_strip.header.frame_id = "map";
         line_strip.header.stamp = this->now();
@@ -121,14 +122,33 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
         line_strip.color.r = 0.0;
         line_strip.color.g = 0.0;
         line_strip.color.b = 1.0;
+        line_strip.lifetime = rclcpp::Duration(1s);
 
+        // Añadir la posicion del avion al principio de la linea
+        geometry_msgs::msg::Point p;
+        p.x = avion_msg.posx;
+        p.y = avion_msg.posy;
+        p.z = avion_msg.posz;
+        line_strip.points.push_back(p);
+
+        // Añadir los waypoints intermedios
         for (const auto& wp : avion_msg.waypoints) {
             geometry_msgs::msg::Point p;
             p.x = wp.x;
             p.y = wp.y;
             p.z = wp.z;
+            RCLCPP_INFO(this->get_logger(), "Adding waypoint: {%.2f, %.2f, %.2f}", wp.x, wp.y, wp.z);
             line_strip.points.push_back(p);
-        }         
+        } 
+
+        //Añadir el waypoint final
+        if (!avion_msg.waypoints.empty()) {
+            const auto& last_wp = avion_msg.waypoints.back();
+            p.x = last_wp.x;
+            p.y = last_wp.y;
+            p.z = last_wp.z;
+            line_strip.points.push_back(p);
+        }        
 
         marker_array.markers.push_back(line_strip);
                 

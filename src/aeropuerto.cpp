@@ -40,7 +40,7 @@ void Aeropuerto::agregarAvion()
     end.y = 5.0;
     end.z = 5.0;
 
-    // Generar 5 puntos intermedios
+    // Generar 2 puntos intermedios
     std::vector<atc_sim_ros2::msg::Waypoint> waypoints = nuevo_avion.generateIntermediateWaypoints(start, end, 2);
     nuevo_avion.addWaypoints(waypoints);
 
@@ -64,12 +64,22 @@ void Aeropuerto::update_airport(double delta_time)
         avion_msg.speed = avion.getSpeed();
         avion_msg.bearing = avion.getBearing();
 
+        //Se agregan los waypoints al mensaje del avion
+        for (const auto& wp : avion.getWaypoints()) {
+            atc_sim_ros2::msg::Waypoint waypoint_msg;
+            waypoint_msg.x = wp.x;
+            waypoint_msg.y = wp.y;
+            waypoint_msg.z = wp.z;
+            avion_msg.waypoints.push_back(waypoint_msg);
+        }
+
         msg_lista.aviones.push_back(avion_msg);
 
         std::cout << "ID: " << avion_msg.id
                   << ", PosX: " << avion_msg.posx
                     << ", PosY: " << avion_msg.posy
                     << ", PosZ: " << avion_msg.posz
+                    << ", Waypoints: " << avion_msg.waypoints.size()
                     << std::endl;  
     }
 
