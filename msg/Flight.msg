@@ -5,4 +5,5 @@ float64 posy
 float64 posz
 float64 speed
 float64 bearing
+bool ruta_completada
 Waypoint[] waypoints

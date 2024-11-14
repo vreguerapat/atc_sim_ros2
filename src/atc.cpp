@@ -35,17 +35,25 @@ class ATC : public rclcpp::Node {
 
         void manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_aviones) {
             for (auto& avion_msg : lista_aviones->aviones) {             
-                // Se verifica si el avion ya tiene waypoints asignados
-                if (avion_msg.waypoints.empty()) {
+                // Se verifica si el avion ha completado su ruta
+                if (!avion_msg.ruta_completada && avion_msg.waypoints.empty()) {
+                    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Avion %s tiene %zu waypoints antes de asignar ruta", avion_msg.id.c_str(), avion_msg.waypoints.size());
                     // Se le asigna destino
                     assignRoute(avion_msg);
+                } else if (avion_msg.ruta_completada) {
+                    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "La ruta del avion %s ya está completada", avion_msg.id.c_str());
                 }
             }
 
         }
 
         void assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
-            RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Avion %s tiene %zu waypoints antes de asignar ruta", avion_msg.id.c_str(), avion_msg.waypoints.size());
+            std::vector<atc_sim_ros2::msg::Waypoint> waypoints;
+
+            if (avion_msg.ruta_completada || !avion_msg.waypoints.empty()) {
+                return;
+            }
+            
             atc_sim_ros2::msg::Waypoint start;
             start.x = avion_msg.posx;
             start.y = avion_msg.posy;
@@ -54,20 +62,22 @@ class ATC : public rclcpp::Node {
             int destino_index = selectLeastAssignedDestination();
 
             atc_sim_ros2::msg::Waypoint destino = waypoints_destino_[destino_index];
-            auto waypoints = generateIntermediateWaypoints(start, destino, 2);
+            waypoints = generateIntermediateWaypoints(start, destino, 2);
 
-            waypoints.push_back(destino);
-
-            if (!waypoints.empty()) {
+            // Si el avion ya tiene waypoints asignados no se asignan mas
+            if (avion_msg.waypoints.empty()) {
+                waypoints.push_back(destino);
+                avion_msg.waypoints = waypoints;
+                avion_msg.ruta_completada = false;
                 RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Publicando waypoints para el avion %s", avion_msg.id.c_str());
+
                 atc_sim_ros2::msg::WaypointUpdate update_msg;
                 update_msg.avion_id = avion_msg.id;
                 update_msg.waypoints = waypoints;
-
                 waypoints_pub_->publish(update_msg);
-                RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Waypoints publicados para el avion %s", avion_msg.id.c_str());
                 contador_destinos_[destino_index]++; // Se actualiza contador
             }
+            
         }
 
         int selectLeastAssignedDestination() {

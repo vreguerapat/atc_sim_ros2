@@ -16,6 +16,7 @@ Avion::Avion()
     speed_ = 10.0;
     bearing_ =generateBearing();
     reached_waypoint_ = false;
+    ruta_completada_ = false;
 }
 
 std::string Avion::getID() const { return id_; }
@@ -164,16 +165,20 @@ void Avion::update(double delta_time)
     if (!reached_waypoint_){
         // Margen de distancia al waypoint
         double waypoint_threshold = 0.2;
-
         RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Distance to waypoint: %.2f", distance_to_waypoint);
 
         if (distance_to_waypoint < waypoint_threshold) {
             reached_waypoint_ = true;
+            waypoints_.erase(waypoints_.begin());
+            RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoint reached. Remaining waypoints:%zu", waypoints_.size());
 
             if (!waypoints_.empty()) {
-                waypoints_.erase(waypoints_.begin());
-                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoint reached. Remaining waypoints:%zu", waypoints_.size());
                 reached_waypoint_ = false;
+            }
+
+            if (waypoints_.empty()) {
+                ruta_completada_ = true;
+                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s ha comletado su ruta", id_.c_str());
             }
             
         } else {

@@ -16,7 +16,6 @@ Aeropuerto::Aeropuerto() : Node("aeropuerto")
     lista_aviones_publisher_ = this->create_publisher<atc_sim_ros2::msg::ListaAviones>("lista_aviones",10);
 
     waypoints_sub_ = this->create_subscription<atc_sim_ros2::msg::WaypointUpdate>("waypoint_update", 10, std::bind(&Aeropuerto::updateWaypoints, this, std::placeholders::_1));
-    RCLCPP_INFO(this->get_logger(), "Nodo suscrito a waypoint_update");
            
     update_timer_ = this->create_wall_timer( 1s, [this]() { update_airport(0.01); });
 

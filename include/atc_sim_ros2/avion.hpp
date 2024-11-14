@@ -33,6 +33,9 @@ class Avion {
         void addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoints);
         void clearWaypoints();
         const std::vector<atc_sim_ros2::msg::Waypoint>& getWaypoints() const;
+
+        bool getRutaCompletada() const {return ruta_completada_; }
+        void setRutaCompletada(bool completada) { ruta_completada_ = completada; }
         
         void selectRandomWaypoint() ;
         static std::vector<atc_sim_ros2::msg::Waypoint> generateIntermediateWaypoints(const atc_sim_ros2::msg::Waypoint& start, const atc_sim_ros2::msg::Waypoint& end, int num_points) ;
@@ -43,6 +46,7 @@ class Avion {
         std::string airline_;
         double posx_, posy_, posz_, speed_, bearing_;
         bool reached_waypoint_;
+        bool ruta_completada_;
         atc_sim_ros2::msg::Waypoint target_waypoint_;
 
         std::vector<atc_sim_ros2::msg::Waypoint> waypoints_;
