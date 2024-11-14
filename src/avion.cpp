@@ -27,10 +27,19 @@ double Avion::getSpeed() const { return speed_; }
 double Avion::getBearing() const { return bearing_; }
 
 void Avion::addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoints) {
+    if (waypoints.empty()) {
+        RCLCPP_WARN(rclcpp::get_logger("avion_logger"), "No se proporcionaron waypoints");
+        return;
+    }
     for (const auto& wp : waypoints) {
         waypoints_.push_back(wp);
     }
     RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints agregados: %zu ", waypoints_.size());
+}
+
+void Avion::clearWaypoints() {
+    waypoints_.clear();
+    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints eliminados ");
 }
 
 const std::vector<atc_sim_ros2::msg::Waypoint>& Avion::getWaypoints() const {

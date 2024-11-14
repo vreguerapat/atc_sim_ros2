@@ -4,6 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "atc_sim_ros2/msg/lista_aviones.hpp"
 #include "avion.hpp"
+#include "atc_sim_ros2/msg/waypoint_update.hpp"
 #include <vector>
 #include <chrono>
 #include <memory>
@@ -13,9 +14,11 @@ class Aeropuerto : public rclcpp::Node {
     public:
         Aeropuerto();
         void agregarAvion();
+        void updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& update_msg);
 
     private:
         rclcpp::Publisher<atc_sim_ros2::msg::ListaAviones>::SharedPtr lista_aviones_publisher_;
+        rclcpp::Subscription<atc_sim_ros2::msg::WaypointUpdate>::SharedPtr waypoints_sub_;
         rclcpp::TimerBase::SharedPtr update_timer_;
         rclcpp::TimerBase::SharedPtr avion_timer_;
         std::vector<Avion> lista_aviones_;

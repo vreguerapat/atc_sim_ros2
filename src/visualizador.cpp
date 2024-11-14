@@ -14,13 +14,13 @@ Visualizador::Visualizador() : Node("visualizador")
     waypoint_marker_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("waypoints_marker", 10);
     timer_ = this->create_wall_timer( 1s, [this]() {publicar_waypoints();});
         
-    /*waypoints_ = {
+    waypoints_ = {
         {0.0, 0.0, 5.0},
         {5.0, 5.0, 5.0}
-    };*/
-    waypoints_ = {
-        {5.0, 5.0, 5.0}
     };
+    /*waypoints_ = {
+        {5.0, 5.0, 5.0}
+    };*/
 }
 
 void Visualizador::publicar_waypoints()

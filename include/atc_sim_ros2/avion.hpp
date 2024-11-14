@@ -7,11 +7,21 @@
 #include <vector>
 #include <array>
 #include "atc_sim_ros2/msg/waypoint.hpp"
+#include "atc_sim_ros2/msg/flight.hpp"
 
 class Avion {
     public:
         Avion();
 
+        Avion(const atc_sim_ros2::msg::Flight& avion_msg) {
+            id_ = avion_msg.id;
+            posx_ = avion_msg.posx;
+            posy_ = avion_msg.posy;
+            posz_ = avion_msg.posz;
+            airline_ = avion_msg.airline;
+            speed_ = avion_msg.speed;
+            bearing_ = avion_msg.bearing;
+        }
         std::string getID() const;
         std::string getAirline() const;
         double getPosX() const;
@@ -21,10 +31,11 @@ class Avion {
         double getBearing() const;
 
         void addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoints);
+        void clearWaypoints();
         const std::vector<atc_sim_ros2::msg::Waypoint>& getWaypoints() const;
         
         void selectRandomWaypoint() ;
-        std::vector<atc_sim_ros2::msg::Waypoint> generateIntermediateWaypoints(const atc_sim_ros2::msg::Waypoint& start, const atc_sim_ros2::msg::Waypoint& end, int num_points) ;
+        static std::vector<atc_sim_ros2::msg::Waypoint> generateIntermediateWaypoints(const atc_sim_ros2::msg::Waypoint& start, const atc_sim_ros2::msg::Waypoint& end, int num_points) ;
         void update(double delta_time); //Método para actualizar posicion aviones
 
     private:

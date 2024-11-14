@@ -2,6 +2,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "atc_sim_ros2/msg/lista_aviones.hpp"
 #include "atc_sim_ros2/avion.hpp"
+#include "atc_sim_ros2/msg/waypoint_update.hpp"
 #include <vector>
 #include <chrono>
 #include <memory>
@@ -13,6 +14,9 @@ Aeropuerto::Aeropuerto() : Node("aeropuerto")
 {
       //Se publica el mensaje lista_aviones
     lista_aviones_publisher_ = this->create_publisher<atc_sim_ros2::msg::ListaAviones>("lista_aviones",10);
+
+    waypoints_sub_ = this->create_subscription<atc_sim_ros2::msg::WaypointUpdate>("waypoint_update", 10, std::bind(&Aeropuerto::updateWaypoints, this, std::placeholders::_1));
+    RCLCPP_INFO(this->get_logger(), "Nodo suscrito a waypoint_update");
            
     update_timer_ = this->create_wall_timer( 1s, [this]() { update_airport(0.01); });
 
@@ -20,7 +24,16 @@ Aeropuerto::Aeropuerto() : Node("aeropuerto")
         
 }
 
-
+void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoint_update) {
+    RCLCPP_INFO(this->get_logger(), "Recibiendo waypoints para el avion %s", waypoint_update.avion_id.c_str());
+    for (auto& avion : lista_aviones_) {
+        if (avion.getID() == waypoint_update.avion_id) {
+            avion.clearWaypoints();
+            avion.addWaypoints(waypoint_update.waypoints);
+            RCLCPP_INFO(this->get_logger(), "Waypoints actualizados para el avion %s", avion.getID().c_str());
+        }
+    }
+}
 //Funcion para agregar nuevo avion
 void Aeropuerto::agregarAvion()
 {
@@ -28,6 +41,7 @@ void Aeropuerto::agregarAvion()
 
     RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
     
+    /*
     // Posicion inicial del avion
     atc_sim_ros2::msg::Waypoint start;
     start.x = nuevo_avion.getPosX();
@@ -42,7 +56,7 @@ void Aeropuerto::agregarAvion()
 
     // Generar 2 puntos intermedios
     std::vector<atc_sim_ros2::msg::Waypoint> waypoints = nuevo_avion.generateIntermediateWaypoints(start, end, 2);
-    nuevo_avion.addWaypoints(waypoints);
+    nuevo_avion.addWaypoints(waypoints);*/
 
     lista_aviones_.push_back(nuevo_avion);
     
