@@ -50,7 +50,7 @@ class ATC : public rclcpp::Node {
         void assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
             std::vector<atc_sim_ros2::msg::Waypoint> waypoints;
 
-            if (avion_msg.ruta_completada || !avion_msg.waypoints.empty()) {
+            if (avion_msg.ruta_completada && avion_msg.waypoints.empty()) {
                 return;
             }
             
@@ -68,7 +68,6 @@ class ATC : public rclcpp::Node {
             if (avion_msg.waypoints.empty()) {
                 waypoints.push_back(destino);
                 avion_msg.waypoints = waypoints;
-                avion_msg.ruta_completada = false;
                 RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Publicando waypoints para el avion %s", avion_msg.id.c_str());
 
                 atc_sim_ros2::msg::WaypointUpdate update_msg;

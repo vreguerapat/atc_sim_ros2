@@ -179,6 +179,8 @@ void Avion::update(double delta_time)
             if (waypoints_.empty()) {
                 ruta_completada_ = true;
                 RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s ha comletado su ruta", id_.c_str());
+                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", id_.c_str(), ruta_completada_ ? "Sí" : "No", waypoints_.empty() ? "Sí" : "No");
+        
             }
             
         } else {

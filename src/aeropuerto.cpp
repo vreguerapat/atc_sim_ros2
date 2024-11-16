@@ -39,23 +39,6 @@ void Aeropuerto::agregarAvion()
     Avion nuevo_avion;
 
     RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
-    
-    /*
-    // Posicion inicial del avion
-    atc_sim_ros2::msg::Waypoint start;
-    start.x = nuevo_avion.getPosX();
-    start.y = nuevo_avion.getPosY();
-    start.z = nuevo_avion.getPosZ();
-
-    // Posicion punto final, fijo
-    atc_sim_ros2::msg::Waypoint end;
-    end.x = 5.0;
-    end.y = 5.0;
-    end.z = 5.0;
-
-    // Generar 2 puntos intermedios
-    std::vector<atc_sim_ros2::msg::Waypoint> waypoints = nuevo_avion.generateIntermediateWaypoints(start, end, 2);
-    nuevo_avion.addWaypoints(waypoints);*/
 
     lista_aviones_.push_back(nuevo_avion);
     
@@ -76,7 +59,8 @@ void Aeropuerto::update_airport(double delta_time)
         avion_msg.posz = avion.getPosZ();
         avion_msg.speed = avion.getSpeed();
         avion_msg.bearing = avion.getBearing();
-
+        avion_msg.ruta_completada = avion.getRutaCompletada();
+        
         //Se agregan los waypoints al mensaje del avion
         for (const auto& wp : avion.getWaypoints()) {
             atc_sim_ros2::msg::Waypoint waypoint_msg;
@@ -93,6 +77,7 @@ void Aeropuerto::update_airport(double delta_time)
                     << ", PosY: " << avion_msg.posy
                     << ", PosZ: " << avion_msg.posz
                     << ", Waypoints: " << avion_msg.waypoints.size()
+                    << ", Ruta completada: " << avion_msg.ruta_completada 
                     << std::endl;  
     }
 
