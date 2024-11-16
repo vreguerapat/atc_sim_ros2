@@ -34,7 +34,7 @@ add_executable(visualizador src/main_visualizador.cpp src/visualizador.cpp)
 ament_target_dependencies(visualizador rclcpp geometry_msgs tf2 visualization_msgs)
 
 #Compilar ATC
-add_executable(atc src/atc.cpp src/avion.cpp)
+add_executable(atc src/atc.cpp src/main_atc.cpp src/avion.cpp)
 ament_target_dependencies(atc rclcpp visualization_msgs)
 
 include_directories(include)
