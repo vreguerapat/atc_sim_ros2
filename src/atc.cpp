@@ -216,7 +216,7 @@ void ATC::checkCollisions(atc_sim_ros2::msg::ListaAviones::SharedPtr msg) {
         }
     }
     // Publica el total de colisiones detectadas
-    RCLCPP_INFO(this->get_logger(), "Total colisiones detectadas: %d", contador_colisiones_);
+    RCLCPP_INFO(this->get_logger(), "Total colisiones detectadas: %d", contador_colisiones_/2);
 }
 
 bool ATC::areTooClose(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2, double threshold_distance) {
@@ -284,8 +284,9 @@ void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg:
        adjustNextWaypoint(avion1);
        }*/
         
+    } else {
+        RCLCPP_INFO(this->get_logger(), "Dist > 5, no se hacen cambios");
     }
-    RCLCPP_INFO(this->get_logger(), "Dist > 5, no se hacen cambios");
 }
 
 void ATC::adjustAltitud(atc_sim_ros2::msg::Flight& avion_msg) {
@@ -351,7 +352,7 @@ void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flig
     double angle_diff2 = normalizeAngle(calculateBearing(avion2, avion1) - avion2.bearing);
 
     // Diferencia de rumbos, para saber si avanzan en direcciones similares
-    double bearing_diff = normalizeAngle(avion1.bearing - avion2. bearing);
+    double bearing_diff = std::abs(normalizeAngle(avion1.bearing - avion2. bearing));
 
     // Configuracion valida, uno detrás del otro:
     // 1. Uno de los aviones debe estar en el cono frontal del otro
@@ -361,9 +362,10 @@ void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flig
         (std::abs(angle_diff2) > M_PI_2) && // Avion 2 fuera del cono frontal de Avion 1
         (std::abs(bearing_diff) < M_PI / 6); // Rumbos compatibles
     
-
+    // Configuracion valida, trayectorias cruzadas
+    bool crossing_trajectories = (bearing_diff >= M_PI / 6 && bearing_diff <= 5 * M_PI / 9); // Diferencia de bearing entre 30º y 100º
     
-    if (!one_behind_other) {
+    if (!one_behind_other && !crossing_trajectories) {
         RCLCPP_INFO(this->get_logger(), "Los aviones no están en configuración válida");
         return;
     }
@@ -376,6 +378,14 @@ void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flig
             avion2.speed = std::max(avion2.speed - speed_adjustment, min_speed);
         } else {
             // Avion 2 está delante, acelera
+            avion2.speed = std::min(avion2.speed + speed_adjustment, max_speed);
+            avion1.speed = std::max(avion1.speed - speed_adjustment, min_speed);
+        }
+    } else if (crossing_trajectories) { // El que esté más cerca del punto de cruce acelera
+        if (angle_diff1 < 0) {
+            avion1.speed = std::min(avion1.speed + speed_adjustment, max_speed);
+            avion2.speed = std::max(avion2.speed - speed_adjustment, min_speed);
+        } else {
             avion2.speed = std::min(avion2.speed + speed_adjustment, max_speed);
             avion1.speed = std::max(avion1.speed - speed_adjustment, min_speed);
         }
