@@ -13,8 +13,8 @@ Avion::Avion()
     posx_ = generateRandomPosition(true, false);
     posy_ = generateRandomPosition(true, false);
     posz_ = generateRandomPosition(false, true);
-    speed_ = 10.0;
     bearing_ =generateBearing();
+    speed_ = 10.0;
     reached_waypoint_ = false;
     ruta_completada_ = false;
 }
@@ -41,6 +41,22 @@ void Avion::addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoin
 void Avion::clearWaypoints() {
     waypoints_.clear();
     RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints eliminados ");
+}
+
+void Avion::setSpeed(double speed) {
+    this->speed_ = speed;
+}
+
+void Avion::setPosX(double x) {
+    this->posx_ = x;
+}
+
+void Avion::setPosY(double y) {
+    this->posy_ = y;
+}
+
+void Avion::setPosZ(double z) {
+    this->posz_ = z;
 }
 
 const std::vector<atc_sim_ros2::msg::Waypoint>& Avion::getWaypoints() const {
@@ -85,20 +101,27 @@ double Avion::generateRandomPosition(bool margins, bool isAltitud)
 
     if(isAltitud) {
         // En el caso de altitud que siempre se genere un valor positivo
-        return 1.0 + random_value * 5;
-    } else {
-        if (margins) {
-            if (random_value < 0.5) {
-                // Se genera en margen negativo
-                return -20.0 + (random_value * 1.0);
-            } else {
-                // Se genera en margen positivo
-                return 20.0 + ((random_value - 0.5) * 1.0);
-            }
+        return 1.0 + random_value * 5.0;  // Altitud entre 1 y 6
+    } else if (margins) {
+        // Generar posicion en los margenes de un cuadrado 20x20
+        double side_length = 20.0;
+        double half_side = side_length / 2.0;
+
+        if (random_value < 0.25) {
+            //Borde inferior
+            return -half_side + random_value * side_length;
+        } else if (random_value < 0.5) {
+            //Borde derecho
+            return half_side + random_value * side_length;
+        } else if (random_value < 0.75) {
+            //Borde superior
+            return half_side - random_value * side_length;
         } else {
-            return -20.0 + random_value * 10.0;
+            //Borde izquierdo
+            return half_side - random_value * side_length;
         }
     }
+    return -20.0 + random_value * 40.0;
     
 }
 
@@ -199,7 +222,7 @@ void Avion::update(double delta_time)
             }
            //bearing_ += (std::abs(angle_difference) < rotation_speed) ? angle_difference : (angle_difference > 0 ? rotation_speed : -rotation_speed);
 
-            double climb_rate = 1.0 * delta_time;
+            double climb_rate = 5.0 * delta_time;
             if (std::abs(dz) < climb_rate) {
                 posz_ = target_waypoint_.z;
             } else {

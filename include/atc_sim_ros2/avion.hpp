@@ -32,6 +32,10 @@ class Avion {
 
         void addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoints);
         void clearWaypoints();
+        void setSpeed(double speed);
+        void setPosX(double x);
+        void setPosY(double y);
+        void setPosZ(double z);
         const std::vector<atc_sim_ros2::msg::Waypoint>& getWaypoints() const;
 
         bool getRutaCompletada() const {return ruta_completada_; }

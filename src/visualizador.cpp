@@ -16,7 +16,8 @@ Visualizador::Visualizador() : Node("visualizador")
         
     waypoints_ = {
         {0.0, 0.0, 5.0},
-        {5.0, 5.0, 5.0}
+        {5.0, 5.0, 5.0},
+        {-6.0, -4.0, 7.0}
     };
    
 }
@@ -120,6 +121,29 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
         text_marker.pose.position.z = avion_msg.posz + 0.5;
         text_marker.text = avion_msg.id;
         marker_array.markers.push_back(text_marker);
+
+        // Visualizar waypoints intermedios
+        for (const auto& wp : avion_msg.waypoints) {
+            visualization_msgs::msg::Marker waypoint_marker;
+            waypoint_marker.header.frame_id = "map";
+            waypoint_marker.header.stamp = this->now();
+            waypoint_marker.ns = "waypoints_intermedios";
+            waypoint_marker.id = id++;
+            waypoint_marker.type = visualization_msgs::msg::Marker::SPHERE;
+            waypoint_marker.action = visualization_msgs::msg::Marker::ADD;
+            waypoint_marker.scale.x = 0.2;
+            waypoint_marker.scale.y = 0.2;
+            waypoint_marker.scale.z = 0.2;
+            waypoint_marker.color.a = 1.0;
+            waypoint_marker.color.r = 0.0;
+            waypoint_marker.color.g = 0.0;
+            waypoint_marker.color.b = 1.0;
+            waypoint_marker.pose.position.x = wp.x;
+            waypoint_marker.pose.position.y = wp.y;
+            waypoint_marker.pose.position.z = wp.z;
+            waypoint_marker.lifetime = rclcpp::Duration(1s);
+            marker_array.markers.push_back(waypoint_marker);
+        }
 
         if (!avion_msg.ruta_completada && !avion_msg.waypoints.empty()) {
             visualization_msgs::msg::Marker line_strip;

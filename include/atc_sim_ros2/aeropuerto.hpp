@@ -9,11 +9,15 @@
 #include <chrono>
 #include <memory>
 #include <array>
+#include <cmath>
 
 class Aeropuerto : public rclcpp::Node {
     public:
         Aeropuerto();
         void agregarAvion();
+        double generateRandomCoordinate();
+        double generateRandomAltitude();
+        double calculateDistance(const Avion& avion1, const Avion& avion2);
         void updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& update_msg);
 
     private:
