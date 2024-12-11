@@ -104,21 +104,20 @@ double Avion::generateRandomPosition(bool margins, bool isAltitud)
         return 1.0 + random_value * 5.0;  // Altitud entre 1 y 6
     } else if (margins) {
         // Generar posicion en los margenes de un cuadrado 20x20
-        double side_length = 20.0;
-        double half_side = side_length / 2.0;
+        double side_position = 20.0;
+        double random_pos = -20.0 + random_value * 40.0;
 
-        if (random_value < 0.25) {
-            //Borde inferior
-            return -half_side + random_value * side_length;
-        } else if (random_value < 0.5) {
-            //Borde derecho
-            return half_side + random_value * side_length;
-        } else if (random_value < 0.75) {
-            //Borde superior
-            return half_side - random_value * side_length;
-        } else {
-            //Borde izquierdo
-            return half_side - random_value * side_length;
+        int border_choice = rand() % 4;
+
+        switch (border_choice) {
+            case 0:
+                return (rand() % 2 ==0) ? -side_position : side_position;
+            case 1:
+                return random_pos;
+            case 2:
+                return (rand() % 2 == 0) ? -side_position : side_position;
+            case 3:
+                return random_pos;
         }
     }
     return -20.0 + random_value * 40.0;

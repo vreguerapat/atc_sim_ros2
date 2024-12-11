@@ -8,6 +8,7 @@
 #include "atc_sim_ros2/msg/waypoint_update.hpp"
 #include <vector>
 #include <cmath>
+#include <optional>
 #include <cstdlib>
 #include <chrono>
 #include <memory>
@@ -33,9 +34,9 @@ ATC::ATC() : Node("atc"), contador_colisiones_(0) {
             if (!aviones_lista_) {
                 return;
             }
-            checkCollisions(aviones_lista_); //Simular colisiones con 5 segundos de anticipacion
+            checkCollisions(aviones_lista_); 
         }
-    );                                                                                                                                                                                                                               
+    );                                                                                                                                                                                                                          
 }
 
 void ATC::avionesCallback(const atc_sim_ros2::msg::ListaAviones::SharedPtr msg) {
@@ -92,49 +93,7 @@ void ATC::assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
         waypoints_pub_->publish(update_msg);
         contador_destinos_[destino_index]++; // Se actualiza contador
     }
-            
-}
-
-bool ATC::willCollidePredictive(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2, double time_ahead, double threshold_distance) {
-    double delta_time = 0.01;
-    double climb_rate = 5.0 * delta_time;
-    double dx1 = avion1.speed * std::cos(avion1.bearing);
-    double dy1 = avion1.speed * std::sin(avion1.bearing);
-    double dz1 = climb_rate;
-
-    double dx2 = avion2.speed * std::cos(avion2.bearing);
-    double dy2 = avion2.speed * std::sin(avion2.bearing);
-    double dz2 = climb_rate;
-
-    double future_x1 = avion1.posx + dx1 * time_ahead;
-    double future_y1 = avion1.posy + dy1 * time_ahead;
-    double future_z1 = avion1.posz + dz1 * time_ahead;
-
-    double future_x2 = avion2.posx + dx2 * time_ahead;
-    double future_y2 = avion2.posy + dy2 * time_ahead;
-    double future_z2 = avion2.posz + dz2 * time_ahead;
-
-    double distance = std::sqrt(
-        std::pow(future_x1 - future_x2, 2) +
-        std::pow(future_y1 - future_y2, 2) +
-        std::pow(future_z1 - future_z2, 2)
-    );
-    RCLCPP_INFO(this->get_logger(), "Distancia entre %s y %s: %.2f", avion1.id.c_str(), avion2.id.c_str(), distance);
-    return distance < threshold_distance;
-}
-
-bool ATC::checkRouteCollision(const atc_sim_ros2::msg::Flight& avion_msg, const std::vector<atc_sim_ros2::msg::Waypoint>& new_route) { 
-    // Se comprueba distancia entre la ruta propuesta y las rutas de otros aviones 
-    for (const auto& wp : new_route) { 
-        for (const auto& otro_avion : aviones_lista_->aviones) { 
-            double distance = calculateDistance(avion_msg, otro_avion); 
-            if (distance < 5.0) { 
-                return true; // Hay colision 
-            } 
-        } 
-    } 
     
-    return false; // No hay colision 
 }
 
 void ATC::adjustRoute(atc_sim_ros2::msg::Flight& avion_msg) { 
@@ -191,24 +150,28 @@ void ATC::checkCollisions(atc_sim_ros2::msg::ListaAviones::SharedPtr msg) {
 
     for (size_t i = 0; i < aviones.size(); i++) {
         for (size_t j = i+1; j < aviones.size(); j++) {
-            /*if (willCollidePredictive(aviones[i], aviones[j], 2.0, 2.0)) {
-                RCLCPP_WARN(this->get_logger(), "Posible colision predictiva entre %s y %s", aviones[i].id.c_str(), aviones[j].id.c_str());
-                adjustTrajectory(aviones[i], aviones[j]);
-            }*/
-           double distance = calculateDistance(aviones[i], aviones[j]);
+           
+           /*double distance = calculateDistance(aviones[i], aviones[j]);
            // Verifica colisiones basadas en las posiciones actuales
            if (areTooClose(aviones[i], aviones[j], 5.0)) {
             RCLCPP_WARN(this->get_logger(), "Posible colision entre %s y %s. Distancia: %.2f", aviones[i].id.c_str(), aviones[j].id.c_str(), distance);
             adjustTrajectory(aviones[i], aviones[j]);
+           }*/
+
+           // Verifica si las rutas están demasiado cerca en algun punto
+           // Verifica colisiones en las rutas asignadas
+           if (routesTooClose(aviones[i], aviones[j], 1.0)) { // Umbral de 1
+                RCLCPP_WARN(this->get_logger(), " Rutas demasiado cercanas entre %s y %s", aviones[i].id.c_str(), aviones[j].id.c_str());
+                adjustTrajectory(aviones[i], aviones[j]);
            }
 
-           //Verifica colisiones en las rutas asignadas
+           
            if (areRoutesIntersecting(aviones[i], aviones[j])) {
-            //RCLCPP_WARN(this->get_logger(), "Rutas en conflicto entre %s y %s", aviones[i].id.c_str(), aviones[j].id.c_str());
-            //adjustTrajectory(aviones[i], aviones[j]);
+            RCLCPP_WARN(this->get_logger(), "Rutas en conflicto entre %s y %s", aviones[i].id.c_str(), aviones[j].id.c_str());
+            adjustTrajectory(aviones[i], aviones[j]);
            }
 
-            double distancia = calculateDistance(aviones[i], aviones[j]);
+           double distancia = calculateDistance(aviones[i], aviones[j]);
            if (distancia < 1) {
             RCLCPP_ERROR(this->get_logger(), "Colsion entre %s y %s", aviones[i].id.c_str(), aviones[j].id.c_str());
             contador_colisiones_++;
@@ -217,6 +180,49 @@ void ATC::checkCollisions(atc_sim_ros2::msg::ListaAviones::SharedPtr msg) {
     }
     // Publica el total de colisiones detectadas
     RCLCPP_INFO(this->get_logger(), "Total colisiones detectadas: %d", contador_colisiones_/2);
+}
+
+bool ATC::routesTooClose(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2, double threshold_distance){
+    if (avion1.waypoints.empty() || avion2.waypoints.empty()) {
+        return false;
+    }
+
+    const int num_points = 100;
+    std::vector<atc_sim_ros2::msg::Waypoint> puntos_trayectoria1 = generateTrajectoryPoints(avion1, avion1.waypoints[0], num_points);
+    std::vector<atc_sim_ros2::msg::Waypoint> puntos_trayectoria2 = generateTrajectoryPoints(avion2, avion2.waypoints[0], num_points);
+
+    //Compara cada punto de la trayectoria 1 con cada punto de la trayectoria 2
+    for (const auto& punto1 : puntos_trayectoria1) {
+        for (const auto& punto2 : puntos_trayectoria2) {
+            double dx = punto1.x - punto2.x;
+            double dy = punto1.y - punto2.y;
+            double dz = punto1.z - punto2.z;
+            double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (distance < threshold_distance) {
+                RCLCPP_WARN(this->get_logger(), "Proximidad detectada entre %s y %s con distancia %.2f", avion1.id.c_str(), avion2.id.c_str(), distance);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+std::vector<atc_sim_ros2::msg::Waypoint> ATC::generateTrajectoryPoints(const atc_sim_ros2::msg::Flight& avion, const atc_sim_ros2::msg::Waypoint& waypoint, int num_points) {
+    std::vector<atc_sim_ros2::msg::Waypoint> trajectory_points;
+
+    double step_x = (waypoint.x - avion.posx) / num_points;
+    double step_y = (waypoint.y - avion.posy) / num_points;
+    double step_z = (waypoint.z - avion.posz) / num_points;
+
+    for (int i = 0; i <= num_points; i++) {
+        atc_sim_ros2::msg::Waypoint point;
+        point.x = avion.posx + step_x * i;
+        point.y = avion.posy + step_y * i;
+        point.z = avion.posz + step_z * i;
+        trajectory_points.push_back(point);
+    }
+
+    return trajectory_points;
 }
 
 bool ATC::areTooClose(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2, double threshold_distance) {
@@ -230,115 +236,301 @@ bool ATC::areTooClose(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros
     return distance < threshold_distance;
 }
 
-bool ATC::areRoutesIntersecting(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2) {
-    // Umbral de tiempo seguro (en segundos)
-    const double safe_time_threshold = 1.0; 
+std::optional<ATC::IntersectionResult> ATC::intersectLines3D(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2, double threshold_distance) {
 
-    for (const auto& wp1 : avion1.waypoints) {
-        for (const auto& wp2 : avion2.waypoints) {
-            if (std::abs(wp1.x - wp2.x) < 0.5 &&
-                std::abs(wp1.y - wp2.y) < 0.5 &&
-                std::abs(wp1.z - wp2.z) < 0.5) {
+    double bearingX1 = std::cos(avion1.bearing);
+    double bearingY1 = std::sin(avion1.bearing);
+    double bearingX2 = std::cos(avion2.bearing);
+    double bearingY2 = std::sin(avion2.bearing);
 
-                    // Se calcula el tiempo de llagada para ambos aviones
-                    double time_to_wp1 = calculateTimeToWaypoint(avion1, wp1);
-                    double time_to_wp2 = calculateTimeToWaypoint(avion2, wp2);
+    // Ecuaciones paramétricas
+    // P1(t) = avion1.posx + bearingX1 * t; P1(t) = avion1.posy + bearingY1 * t
+    // P1(t) = avion2.posx + bearingX2 * t; P1(t) = avion2.posy + bearingY2 * t
 
-                    //RCLCPP_INFO(this->get_logger(), "Interseccion detectada en {%.2f, %.2f, %.2f}. Tiempos: %.2fs y %.2fs", wp1.x, wp1.y, wp1.z, time_to_wp1, time_to_wp2);
+    // Se resuelve el sistema de ecuaciones para encontrar el punto de interseccion
+    double denominator = (bearingX1 * bearingY2 - bearingY1 * bearingX2);
 
-                    // Evaluar si los tiempos son peligrosos
-                    if (std::abs(time_to_wp1 - time_to_wp2) < safe_time_threshold) {
-                        return true;
-                    }
-                }
+    if (std::abs(denominator) < 1e-6) {
+        // Si el denominador es 0, las trayectorias son paralelas y no se intersectan
+        // Se calcula la distancia entre las trayectorias para comprobar el umbral
+        double dx1 = std::abs(avion2.posx - avion1.posx);
+        double dy1 = std::abs(avion2.posy - avion1.posy);
+        double dz1 = std::abs(avion2.posz - avion1.posz);
+        double distance = std::sqrt(std::pow(bearingX1 * dy1 - bearingY1 * dx1, 2) + std::pow(dz1, 2));
+        if (distance < threshold_distance) {
+            return IntersectionResult{0.0,0.0,0.0}; // No hay interseccion exacta
         }
+        return IntersectionResult{0.0,0.0,0.0};
     }
+
+    double t1 = ((avion2.posx - avion1.posx) * bearingY2 - (avion2.posy - avion1.posy) * bearingX2) / denominator;
+
+    // Coordenadas de interseccion
+    double x_intersection = avion1.posx + bearingX1 * t1;
+    double y_intersection = avion1.posy + bearingY1 * t1; 
+    double z_intersection = avion1.posz + (avion2.posz - avion1.posz) * t1;
+
+    // Se verifica la interseccion dentro del umbral
+    double distance = std::sqrt(std::pow(x_intersection - avion1.posx, 2) +
+                                std::pow(y_intersection - avion1.posy, 2) +
+                                std::pow(z_intersection - avion1.posz, 2));
+    if (distance < threshold_distance) {
+        return IntersectionResult{x_intersection, y_intersection, z_intersection};
+    }
+
+    return std::nullopt;
+}
+
+bool ATC::areRoutesIntersecting(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2) {
+     if (avion1.waypoints.empty() || avion2.waypoints.empty()) {
+        return false;
+    }
+    double threshold_distance = 1.0;
+    // Se verifica si ambos aviones tienen el mismo waypoint o similar
+    if (std::abs(avion1.waypoints[0].x - avion2.waypoints[0].x) <= threshold_distance &&
+        std::abs(avion1.waypoints[0].y - avion2.waypoints[0].y) <= threshold_distance &&
+        std::abs(avion1.waypoints[0].z - avion2.waypoints[0].z) <= threshold_distance) {
+            double time_to_wp1 = calculateTimeToWaypoint(avion1, avion1.waypoints[0].x, avion1.waypoints[0].y, avion1.waypoints[0].z);
+            double time_to_wp2 = calculateTimeToWaypoint(avion2, avion2.waypoints[0].x, avion2.waypoints[0].y, avion2.waypoints[0].z);
+            
+
+            if (std::abs(time_to_wp1 - time_to_wp2) < 0.2) { // No son 0.06 segundos si no 6 "simulaciones"
+                RCLCPP_WARN(this->get_logger(), "Intersección detectada POR MISMO WAYPOINT entre %s y %s ", avion1.id.c_str(), avion2.id.c_str());
+               RCLCPP_INFO(this->get_logger(), "Tiempo: %.2f, %.2f . Dif: %.2f", time_to_wp1, time_to_wp2, std::abs(time_to_wp1 - time_to_wp2));
+                return true;
+            }
+    }
+
+    auto result = intersectLines3D(avion1, avion2, threshold_distance);
+    if (!result) {
+        return false; // No hay interseccion en las trayectorias
+    }
+
+    double time_to_wp1 = calculateTimeToWaypoint(avion1, result->x, result->y, result->z);
+    double time_to_wp2 = calculateTimeToWaypoint(avion2, result->x, result->y, result->z);
+
+    if (std::abs(time_to_wp1 - time_to_wp2) < 0.2) {
+        RCLCPP_WARN(this->get_logger(), "Intersección detectada entre %s y %s en (%.2f, %.2f, %.2f)", avion1.id.c_str(), avion2.id.c_str(), result->x, result->y, result->z);
+        RCLCPP_INFO(this->get_logger(), "Tiempo: %.2f, %.2f . Dif: %.2f", time_to_wp1, time_to_wp2, std::abs(time_to_wp1 - time_to_wp2));
+        return true;
+    }
+
     return false;
 }
 
-double ATC::calculateTimeToWaypoint(const atc_sim_ros2::msg::Flight& avion, const atc_sim_ros2::msg::Waypoint& wp) {
-    double dx = wp.x - avion.posx;
-    double dy = wp.y - avion.posy;
-    double dz = wp.z - avion.posz;
+double ATC::calculateTimeToWaypoint(const atc_sim_ros2::msg::Flight& avion, double x, double y, double z) {
+    double dx = x - avion.posx;
+    double dy = y - avion.posy;
+    double dz = z - avion.posz;
     double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
-    return distance/avion.speed;
+    double speed = avion.speed;
+    double time = distance / speed;
+    return time;
 }
 
 void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
-    double distance = calculateDistance(avion1, avion2);
+    bool avoidCollision = false;
+    RCLCPP_INFO(this->get_logger(), "Ajustando la trayectoria para %s y %s", avion1.id.c_str(), avion2.id.c_str());
 
-    if (distance < 5.0) {
-        // 1. Ajustar velocidad
+    if (!avoidCollision) {
+        // Paso 1: Ajustar la velocidad de los aviones
         adjustSpeed(avion1, avion2);
-
-        // 2. Si estan muy cerca en altura, ajustar altitud
-        /*
-        if (abs(avion1.posz - avion2.posz) < 2) {
-        adjust Altitud(avion1);
+        if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
+            avoidCollision = true;
         }
-        */
-
-       // 3. Modificar ruta del avion
-       /* 
-       else if (avion1.waypoints.size() > 1) {
-       adjustNextWaypoint(avion1);
-       }*/
-        
-    } else {
-        RCLCPP_INFO(this->get_logger(), "Dist > 5, no se hacen cambios");
-    }
-}
-
-void ATC::adjustAltitud(atc_sim_ros2::msg::Flight& avion_msg) {
-    if (avion_msg.waypoints.empty()) {
-        return;
-    }
-
-    // Se define un limite máximo de altitud
-    double max_altitude = 10.0;
-
-    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ajustando altitud del avion %s para evitar colision", avion_msg.id.c_str()); 
-    // Para ello se modifica la pos z del siguiente waypoint
-    double altitude_change = 5.0;
-
-    // Limitar la altitud para que no supere el maximo
-    if (avion_msg.waypoints.front().z + altitude_change > max_altitude) {
-        avion_msg.waypoints.front().z = max_altitude;
-    } else {
-        avion_msg.waypoints.front().z += altitude_change; 
     }
     
-    // Se publica la actualizacion del waypoint
-    atc_sim_ros2::msg::WaypointUpdate update_msg;
-    update_msg.avion_id = avion_msg.id;
-    update_msg.waypoints = avion_msg.waypoints;
-    update_msg.speed = avion_msg.speed;
-    waypoints_pub_->publish(update_msg);
+    // Si no se ha evitado la colision con la velocidad se intenta ajustando la altura
+    if (!avoidCollision) {
+        // Paso 2: Ajustar la altitud de ambos aviones
+        adjustAltitude(avion1, avion2);
+        if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
+            avoidCollision = true;
+        }
+    }
+    
+    // Si aún no se evitó la colisión se intenta ajustando los waypoints lateralmente
+    if (!avoidCollision) {
+        // Paso 2: Ajustar la altitud de ambos aviones
+        adjustNextWaypoint(avion1, avion2);
+        if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
+            avoidCollision = true;
+        }
+    }
+    
+    /*if (!avoidCollision) {
+        // Paso 1: Ajustar la velocidad de los aviones
+        adjustSpeed(avion1, avion2);
+        if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
+            avoidCollision = true;
+        }
+    }*/
 
-    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Altitud ajustada para el primer waypoint del avion %s. Nueva altitud: %.2f", avion_msg.id.c_str(), avion_msg.waypoints.front().z);
+   /*
+    // Se pueden añadir más ajustes, quedaría cambiar ruta
+    if (!avoidCollision) {
+        RCLCPP_WARN(this->get_logger(), "Colisión no evitada entre %s y %s", avion1.id.c_str(), avion2.id.c_str());
+    }
+    */
+
+    /*
+    if (areRoutesIntersecting(avion1, avion2)){
+        // Paso 2: Ajustar la altitud de ambos aviones
+        adjustAltitude(avion1, avion2);
+    }
+    
+    if (routesTooClose(avion1, avion2, 1.0)) { // Umbral de 1
+        RCLCPP_INFO(this->get_logger(), "La colisión persiste. Intentando ajustar altitud");
+        adjustAltitude(avion1, avion2);
+    }
+    */
+    
 }
 
-void ATC::adjustNextWaypoint(atc_sim_ros2::msg::Flight& avion_msg) {
-    if (avion_msg.waypoints.empty()) {
+bool ATC::checkCollisionAfterAdjustment(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
+    if (routesTooClose(avion1, avion2, 1.0)) { // Umbral de 1
+        RCLCPP_INFO(this->get_logger(), "Colisión no evitada después del ajuste");
+        return false; // No se evitó la colisión
+    }
+    if (areRoutesIntersecting(avion1, avion2)){
+        RCLCPP_INFO(this->get_logger(), "Colisión no evitada después del ajuste");
+        return false; // No se evitó la colisión
+    }
+    return true; // Se evitó la colisión
+}
+
+void ATC::adjustAltitude(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
+    if (avion1.waypoints.empty() || avion2.waypoints.empty()) {
         return;
     }
-    // Se cambia el siguient waypoint
-    atc_sim_ros2::msg::Waypoint new_wp = avion_msg.waypoints[0];
-    new_wp.x += 1.0;
-    new_wp.y += 1.0;
 
-    // Se actualizan los waypoints del avion
-    avion_msg.waypoints[0] = new_wp;
+    // Se eliminan todos los waypoints intermedios de ambos aviones excepto el destino
+    if (avion1.waypoints.size() <=1 || avion2.waypoints.size() <= 1) {
+        return;
+    }
 
-    // Se publican las actualizaciones de la ruta
-    atc_sim_ros2::msg::WaypointUpdate update_msg;
-    update_msg.avion_id = avion_msg.id;
-    update_msg.waypoints.push_back(new_wp);
-    update_msg.speed = avion_msg.speed;
-    waypoints_pub_->publish(update_msg);
+    auto final_destination1 = avion1.waypoints.back();
+    avion1.waypoints.clear();
+    avion1.waypoints.push_back(final_destination1);
 
-    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ajustando waypoint del avion %s para evitar colision", avion_msg.id.c_str());
+    auto final_destination2 = avion2.waypoints.back();
+        avion2.waypoints.clear();
+        avion2.waypoints.push_back(final_destination2);
+    // Se decide que avion sube en funcion de la posicion en z
+    bool avion1_sube = avion1.posz > avion2.posz;
+
+    // Parámetros max y min
+    double delta_altitude = 1.0;
+    double max_altitude = 10.0;
+    double min_altitude = 0.0;
+
+    // Se calcula el desplazamiento para el primer waypoint segun el bearing
+    double avance_distancia = 1.5;
+    double bearing_rad1 = avion1.bearing * M_PI / 180.0;
+    double bearing_rad2 = avion2.bearing * M_PI / 180.0;
+
+    // Se crea un nuevo waypoint inicial con ajuste en Z
+    atc_sim_ros2::msg::Waypoint nuevo_wp1, nuevo_wp2;
+
+    nuevo_wp1.x = avion1.posx + avance_distancia * cos(bearing_rad1); 
+    nuevo_wp1.y = avion1.posy + avance_distancia * sin(bearing_rad1);
+
+    nuevo_wp2.x = avion2.posx + avance_distancia * cos(bearing_rad2);
+    nuevo_wp2.y = avion2.posy + avance_distancia * sin(bearing_rad2);
+
+    if (avion1.posz < avion2.posz){
+        // Avion2 sube
+        nuevo_wp1.z = std::max(avion1.posz - delta_altitude, min_altitude);
+        nuevo_wp2.z = std::min(avion2.posz + delta_altitude, max_altitude);
+    } else {
+        // Avion1 sube
+        nuevo_wp1.z = std::min(avion1.posz + delta_altitude, max_altitude);
+        nuevo_wp2.z = std::max(avion2.posz - delta_altitude, min_altitude);
+    }
+
+    // Se generan nuevos waypoints intermedios
+    int num_intermedios = 2;
+    std::vector<atc_sim_ros2::msg::Waypoint> waypoints1 = generateIntermediateWaypoints(nuevo_wp1, final_destination1, num_intermedios);
+    std::vector<atc_sim_ros2::msg::Waypoint> waypoints2 = generateIntermediateWaypoints(nuevo_wp2, final_destination2, num_intermedios);
+
+    // Se añaden los nuevos waypoints a los aviones
+    avion1.waypoints.insert(avion1.waypoints.begin(), waypoints1.begin(), waypoints1.end());
+    avion2.waypoints.insert(avion2.waypoints.begin(), waypoints2.begin(), waypoints2.end());
+
+    // Se publican los nuevos waypoints para ambos aviones
+    atc_sim_ros2::msg::WaypointUpdate update_msg1;
+    update_msg1.avion_id = avion1.id;
+    update_msg1.waypoints = avion1.waypoints;
+    update_msg1.speed = avion1.speed;
+    waypoints_pub_->publish(update_msg1);
+
+    atc_sim_ros2::msg::WaypointUpdate update_msg2;
+    update_msg2.avion_id = avion2.id;
+    update_msg2.waypoints = avion2.waypoints;
+    update_msg2.speed = avion2.speed;
+    waypoints_pub_->publish(update_msg2);
+
+    RCLCPP_INFO(this->get_logger(), "Altitud ajustada: El avion %s %s y el avion %s %s", avion1.id.c_str(), avion1_sube ? "sube" : "baja", avion2.id.c_str(), avion1_sube ? "baja" : "sube");
+   
+}
+
+void ATC::adjustNextWaypoint(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
+    if (avion1.waypoints.empty() || avion2.waypoints.empty()) {
+        return;
+    }
+
+    // Se eliminan todos los waypoints intermedios de ambos aviones excepto el destino
+    if (avion1.waypoints.size() <=1 || avion2.waypoints.size() <= 1) {
+        return;
+    }
+    
+    auto final_destination1 = avion1.waypoints.back();
+    auto final_destination2 = avion2.waypoints.back();
+
+    // Se calcula la direccion relativa entre los dos aviones
+    double dx = final_destination2.x - final_destination1.x;
+    double dy = final_destination2.y - final_destination1.y;
+
+    avion1.waypoints.clear();
+    avion1.waypoints.push_back(final_destination1);
+    atc_sim_ros2::msg::Waypoint new_wp1;
+
+    if (dx * dy > 0) { //Si ambos aviones se mueven en la misma direccion 
+        
+        // Se genera un nuevo wp para el avion 1 desplazado a la derecha
+        new_wp1 = createLateralDisplacedWaypoint(avion1, true);
+        
+    } else {
+        // Se desplaza a la izquierda
+        new_wp1 = createLateralDisplacedWaypoint(avion1, false);
+    }
+    
+    // Se añade el waypoint desplazado al inicio de la lista de waypoints de cada avion
+    avion1.waypoints.insert(avion1.waypoints.begin(), new_wp1);
+    // Se generan los nuevos waypoints intermedios
+    std::vector<atc_sim_ros2::msg::Waypoint> new_waypoints1 = generateIntermediateWaypoints(new_wp1, final_destination1, 2);
+    // Se insertan los waypoints intermedios
+    avion1.waypoints.insert(avion1.waypoints.begin() + 1, new_waypoints1.begin(), new_waypoints1.end());
+    // Publicar la actualización
+    atc_sim_ros2::msg::WaypointUpdate update_msg1;
+    update_msg1.avion_id = avion1.id;
+    update_msg1.waypoints = avion1.waypoints;
+    update_msg1.speed = avion1.speed;
+    waypoints_pub_->publish(update_msg1);
+    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ajustando waypoint del avion %s ", avion1.id.c_str());
 }   
+
+atc_sim_ros2::msg::Waypoint ATC::createLateralDisplacedWaypoint(atc_sim_ros2::msg::Flight& avion, bool moveRight) {
+    atc_sim_ros2::msg::Waypoint wp;
+    double displacement = moveRight ? 1.0 : -1.0; // Desplazamiento lateral de una unidad
+    double perpendicular_angle = avion.bearing + M_PI_2;
+
+    // Cálculo de la nueva posición desplazada lateralmente
+    wp.x = avion.posx + displacement * std::cos(perpendicular_angle);
+    wp.y = avion.posy + displacement * std::sin(perpendicular_angle);
+    wp.z = avion.posz;
+    return wp;
+}
 
 void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
     RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ajustando velocidades de %s y %s para evitar colision", avion1.id.c_str(), avion2.id.c_str());
@@ -346,7 +538,50 @@ void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flig
     const double min_speed = 5.0;
     const double max_speed = 30.0;
     const double speed_adjustment = 5.0;
+    double threshold_distance = 1.0;
 
+    // Primero se calcula el punto de interseccion
+    auto result = intersectLines3D(avion1, avion2, threshold_distance);
+
+    // Se calcula la distancia del avion 1 al punto de interseccion
+    double dx1 = result->x - avion1.posx;
+    double dy1 = result->y - avion1.posy;
+    double dz1 = result->z - avion1.posz;
+    double distance1 = std::sqrt(dx1 * dx1 + dy1 * dy1 + dz1 * dz1);
+
+    // Se calcula la distancia del avion 2 al punto de interseccion
+    double dx2 = result->x - avion2.posx;
+    double dy2 = result->y - avion2.posy;
+    double dz2 = result->z - avion2.posz;
+    double distance2 = std::sqrt(dx2 * dx2 + dy2 * dy2 + dz2 * dz2);
+
+    if (distance1 < distance2){
+        //Avion 1 está mas cerca, aumenta velocidad
+        avion1.speed = std::min(avion1.speed + speed_adjustment, max_speed);
+        avion2.speed = std::max(avion2.speed - speed_adjustment, min_speed);
+    } else {
+        // Avion 2 está más cerca, reduce su velocidad
+        //Avion 1 está mas cerca, aumenta velocidad
+        avion2.speed = std::min(avion2.speed + speed_adjustment, max_speed);
+        avion1.speed = std::max(avion1.speed - speed_adjustment, min_speed);
+    }
+
+    // Se publican las velocidades actualizadas
+    atc_sim_ros2::msg::WaypointUpdate update_msg1;
+    update_msg1.avion_id = avion1.id;
+    update_msg1.waypoints = avion1.waypoints;
+    update_msg1.speed = avion1.speed;
+
+    atc_sim_ros2::msg::WaypointUpdate update_msg2;
+    update_msg2.avion_id = avion2.id;
+    update_msg2.waypoints = avion2.waypoints;
+    update_msg2.speed = avion2.speed;
+
+    waypoints_pub_->publish(update_msg1);
+    waypoints_pub_->publish(update_msg2);
+
+    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Velocidades ajustadas: %s (%.2f) y %s (%.2f)", avion1.id.c_str(), avion1.speed, avion2.id.c_str(), avion2.speed);
+    /*
     // Calcular diferencias angulares
     double angle_diff1 = normalizeAngle(calculateBearing(avion1, avion2) - avion1.bearing);
     double angle_diff2 = normalizeAngle(calculateBearing(avion2, avion1) - avion2.bearing);
@@ -411,6 +646,7 @@ void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flig
     waypoints_pub_->publish(update_msg2);
 
     RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Velocidades ajustadas: %s (%.2f) y %s (%.2f)", avion1.id.c_str(), avion1.speed, avion2.id.c_str(), avion2.speed);
+    */
 }
 
 double ATC::calculateBearing(atc_sim_ros2::msg::Flight& from, atc_sim_ros2::msg::Flight& to) {
