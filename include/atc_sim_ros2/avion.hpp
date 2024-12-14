@@ -36,6 +36,7 @@ class Avion {
         void setPosX(double x);
         void setPosY(double y);
         void setPosZ(double z);
+        void setBearing(double bearing);
         const std::vector<atc_sim_ros2::msg::Waypoint>& getWaypoints() const;
 
         bool getRutaCompletada() const {return ruta_completada_; }

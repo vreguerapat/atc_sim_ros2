@@ -16,6 +16,8 @@ class Aeropuerto : public rclcpp::Node {
         Aeropuerto();
         void agregarAvion();
         double generateRandomCoordinate();
+        double generateRandomCoordinateX();
+        double generateRandomCoordinateY();
         double generateRandomAltitude();
         double calculateDistance(const Avion& avion1, const Avion& avion2);
         void updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& update_msg);

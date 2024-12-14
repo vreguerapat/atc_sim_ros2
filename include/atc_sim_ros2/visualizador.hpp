@@ -20,7 +20,7 @@ class Visualizador : public rclcpp::Node{
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
         rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr waypoint_marker_publisher_;
         rclcpp::TimerBase::SharedPtr timer_;
-        std::vector<std::array<float,3>> waypoints_; 
+        std::vector<std::array<float,11>> waypoints_; 
 
         void publicar_waypoints();
         void visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::SharedPtr msg_lista);

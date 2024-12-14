@@ -15,9 +15,17 @@ Visualizador::Visualizador() : Node("visualizador")
     timer_ = this->create_wall_timer( 1s, [this]() {publicar_waypoints();});
         
     waypoints_ = {
-        {0.0, 0.0, 5.0},
-        {5.0, 5.0, 5.0},
-        {-6.0, -4.0, 7.0}
+        {0.0, 0.0, 0.0},
+        {0.0, 15.0, 5.0},
+        {10.0, 25.0, 7.0},
+        {40.0, 20.0, 5.0},
+        {37.0, 30.0, 5.0},
+        {30.0, 35.0, 5.0},
+        {20.0, 30.0, 5.0},
+        {17.0, 20.0, 5.0},
+        {20.0, 10.0, 5.0},
+        {30.0, 5.0, 5.0},
+        {37.0, 10.0, 5.0}
     };
    
 }
@@ -47,8 +55,29 @@ void Visualizador::publicar_waypoints()
         waypoint_marker.lifetime = rclcpp::Duration(1s);
 
         marker_array.markers.push_back(waypoint_marker);
+
+        visualization_msgs::msg::Marker text_marker;
+        text_marker.header.frame_id = "map";
+        text_marker.header.stamp = this->now();
+        text_marker.ns = "wp_texto";
+        text_marker.id = id++;
+        text_marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+        text_marker.action = visualization_msgs::msg::Marker::ADD;
+        text_marker.scale.z = 0.5;
+        text_marker.color.a = 1.0;
+        text_marker.color.r =1.0;
+        text_marker.color.g = 1.0;
+        text_marker.color.b = 1.0;
+        text_marker.lifetime = rclcpp::Duration(1s);
+        text_marker.pose.position.x = wp[0];
+        text_marker.pose.position.y = wp[1];
+        text_marker.pose.position.z = wp[2] + 0.5;
+        text_marker.text = "[" + std::to_string(wp[0]) + ", " + std::to_string(wp[1]) + ", " + std::to_string(wp[2]) + "]";
+        marker_array.markers.push_back(text_marker);
     }
     waypoint_marker_publisher_->publish(marker_array);
+
+    
 }
 
 void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::SharedPtr msg_lista)

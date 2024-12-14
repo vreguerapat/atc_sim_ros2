@@ -13,7 +13,7 @@ Avion::Avion()
     posx_ = generateRandomPosition(true, false);
     posy_ = generateRandomPosition(true, false);
     posz_ = generateRandomPosition(false, true);
-    bearing_ =generateBearing();
+    bearing_ = generateBearing();
     speed_ = 10.0;
     reached_waypoint_ = false;
     ruta_completada_ = false;
@@ -35,12 +35,12 @@ void Avion::addWaypoints(const std::vector<atc_sim_ros2::msg::Waypoint>& waypoin
     for (const auto& wp : waypoints) {
         waypoints_.push_back(wp);
     }
-    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints agregados: %zu ", waypoints_.size());
+    //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints agregados: %zu ", waypoints_.size());
 }
 
 void Avion::clearWaypoints() {
     waypoints_.clear();
-    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints eliminados ");
+    //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoints eliminados ");
 }
 
 void Avion::setSpeed(double speed) {
@@ -57,6 +57,10 @@ void Avion::setPosY(double y) {
 
 void Avion::setPosZ(double z) {
     this->posz_ = z;
+}
+
+void Avion::setBearing(double bearing) {
+    this->bearing_ = bearing;
 }
 
 const std::vector<atc_sim_ros2::msg::Waypoint>& Avion::getWaypoints() const {
@@ -138,14 +142,14 @@ void Avion::selectRandomWaypoint()
 {
     // Se verifica si hay waypoints disponibles
     if (waypoints_.empty()) {
-        RCLCPP_WARN(rclcpp::get_logger("avion_logger"), "No hay waypoints disponibles");
+        //RCLCPP_WARN(rclcpp::get_logger("avion_logger"), "No hay waypoints disponibles");
         return;
     }
     int selected_waypoint = rand() % waypoints_.size();
     //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Índice seleccionado: %d, Tamaño de waypoints: %zu", selected_waypoint, waypoints_.size());
     target_waypoint_ = waypoints_[selected_waypoint];
 
-    RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint %d", id_.c_str(), selected_waypoint);
+    //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint %d", id_.c_str(), selected_waypoint);
 }
 
 // Funcion para generar waypoints intermedios
@@ -164,7 +168,7 @@ std::vector<atc_sim_ros2::msg::Waypoint> Avion::generateIntermediateWaypoints(co
         wp.z = start.z + step_z * i;
         intermediate_waypoints.push_back(wp);
 
-        RCLCPP_INFO( rclcpp::get_logger("avion_logger"), "waypoint intermedio %d: {%.2f, %.2f, %.2f}", i, wp.x, wp.y, wp.z);
+        //RCLCPP_INFO( rclcpp::get_logger("avion_logger"), "waypoint intermedio %d: {%.2f, %.2f, %.2f}", i, wp.x, wp.y, wp.z);
     }
     
     return intermediate_waypoints;
@@ -175,7 +179,7 @@ void Avion::update(double delta_time)
 {
     if (!waypoints_.empty()) {
         target_waypoint_ = waypoints_.front();
-        RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint en posicion {%.2f, %.2f, %.2f}", id_.c_str(), target_waypoint_.x, target_waypoint_.y, target_waypoint_.z);
+        //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s dirigiendose al waypoint en posicion {%.2f, %.2f, %.2f}", id_.c_str(), target_waypoint_.x, target_waypoint_.y, target_waypoint_.z);
     }
     
    // Primero se calcula el angulo hacia el waypoint
@@ -186,13 +190,13 @@ void Avion::update(double delta_time)
 
     if (!reached_waypoint_){
         // Margen de distancia al waypoint
-        double waypoint_threshold = 0.2;
-        RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Distance to waypoint: %.2f", distance_to_waypoint);
+        double waypoint_threshold = 0.8;
+        //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Distance to waypoint: %.2f", distance_to_waypoint);
 
         if (distance_to_waypoint < waypoint_threshold) {
             reached_waypoint_ = true;
             waypoints_.erase(waypoints_.begin());
-            RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoint reached. Remaining waypoints:%zu", waypoints_.size());
+            //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Waypoint reached. Remaining waypoints:%zu", waypoints_.size());
 
             if (!waypoints_.empty()) {
                 reached_waypoint_ = false;
@@ -200,8 +204,8 @@ void Avion::update(double delta_time)
 
             if (waypoints_.empty()) {
                 ruta_completada_ = true;
-                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s ha comletado su ruta", id_.c_str());
-                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", id_.c_str(), ruta_completada_ ? "Sí" : "No", waypoints_.empty() ? "Sí" : "No");
+                //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s ha comletado su ruta", id_.c_str());
+                //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", id_.c_str(), ruta_completada_ ? "Sí" : "No", waypoints_.empty() ? "Sí" : "No");
         
             }
             
