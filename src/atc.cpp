@@ -16,7 +16,8 @@
 using namespace std::chrono_literals;
 
 ATC::ATC() : Node("atc"), 
-             contador_colisiones_(0)
+             contador_colisiones_(0),
+             landing(false)
               
 {
     aviones_sub_ = this->create_subscription<atc_sim_ros2::msg::ListaAviones>( "lista_aviones", 10, std::bind(&ATC::avionesCallback, this, std::placeholders::_1));
@@ -34,7 +35,7 @@ ATC::ATC() : Node("atc"),
     wp1.x = 40.0; wp1.y = 20.0; wp1.z = 5.0;
     wp2.x = 37.0; wp2.y = 30.0; wp2.z = 5.0;
     wp3.x = 30.0; wp3.y = 35.0; wp3.z = 5.0;
-    wp4.x = 20.0; wp4.y = 30.0; wp4.z = 5.0;
+    wp4.x = 20.0; wp4.y = 30.0; wp4.z = 5.0; // Wp salida
     wp5.x = 17.0; wp5.y = 20.0; wp5.z = 5.0;
     wp6.x = 20.0; wp6.y = 10.0; wp6.z = 5.0;
     wp7.x = 30.0; wp7.y = 5.0; wp7.z = 5.0;
@@ -42,10 +43,15 @@ ATC::ATC() : Node("atc"),
     circuit_waypoints_ = {wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8}; 
 
     waypoints_destino_ = {destino1, destino2};
-    contador_destinos_ =  {0,0};    
+    contador_destinos_ =  {0,0}; 
 
-    
+    atc_sim_ros2::msg::Waypoint wp9, wp10, wp11;
+    wp9.x = 10.0; wp9.y = 25.0; wp9.z = 5.0;
+    wp10.x = 0.0; wp10.y = 15.0; wp10.z = 5.0;
+    wp11.x = 0.0; wp11.y = 0.0; wp11.z = 0.0;
+    landing_route_ = {wp4, wp9, wp10, wp11};
 
+   
     collision_check_timer_ = this->create_wall_timer(
         1s, [this]() {
             if (!aviones_lista_) {
@@ -69,15 +75,65 @@ void ATC::manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_av
         // Se verifica si el avion ha completado su ruta
         if (!avion_msg.ruta_completada && avion_msg.waypoints.empty()) {
             //RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Avion %s tiene %zu waypoints antes de asignar ruta", avion_msg.id.c_str(), avion_msg.waypoints.size());
-            // Se le asigna destino
+            // Se le asigna la ruta inicial
             assignRoute(avion_msg);
-        } else if (avion_msg.ruta_completada) {
-            //RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "La ruta del avion %s ya está completada", avion_msg.id.c_str());
+        } else if (avion_msg.waypoints.empty() && avion_msg.ruta_completada) {
+            //landing = false; // El avion ha aterrizado
+            //RCLCPP_INFO(this->get_logger(), "El avion %s ha aterrizado. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
+        } else if (!avion_msg.waypoints.empty()) {
+            // Caso para verificar si avion en waypoint de salida
+            RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+            
+            atc_sim_ros2::msg::Waypoint current_wp = avion_msg.waypoints.front();
+
+            // Se verifica si el avion está cerca del waypoint {10.0, 25.0, 5.0} para dar permiso de aterrizaje a otro avion
+            atc_sim_ros2::msg::Waypoint landing_wp;
+            landing_wp.x = 10.0; landing_wp.y = 25.0; landing_wp.z = 5.0;
+            double distance_to_landing_wp = distanceBetweenWaypoints(current_wp, landing_wp);
+
+            if (distance_to_landing_wp <= 2) {
+                landing = false;
+                RCLCPP_INFO(this->get_logger(), "El avion %s está en el waypoint de liberación de aterrizaje. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
+            }
+
+            atc_sim_ros2::msg::Waypoint exit_wp;
+            exit_wp.x = 20.0; exit_wp.y = 30.0; exit_wp.z = 5.0;  
+            double distance = distanceBetweenWaypoints(current_wp, exit_wp);
+
+            if (distance <= 3) {
+                if (!landing) {
+                    //RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+                    RCLCPP_INFO(this->get_logger(), "AssignLandingRoute para %s", avion_msg.id.c_str());
+                    assignLandingRoute(avion_msg);
+                    landing = true;
+                    RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+                    return;
+                } else if (!landing){
+                    //RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+                    RCLCPP_INFO(this->get_logger(), "AssignRoute para %s", avion_msg.id.c_str());
+                    avion_msg.waypoints.clear();
+                    //RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+                    assignRoute(avion_msg);
+                }
+            }
         }
     }
 
 }
-        
+
+void ATC::assignLandingRoute(atc_sim_ros2::msg::Flight& avion_msg) {
+    avion_msg.waypoints.clear();
+    avion_msg.waypoints = landing_route_; 
+
+    atc_sim_ros2::msg::WaypointUpdate update_msg;
+    update_msg.avion_id = avion_msg.id;
+    update_msg.waypoints = avion_msg.waypoints;
+    update_msg.speed = 25.0; // AQUI HE PUESTO VELOCIDAD FIJA
+    waypoints_pub_->publish(update_msg);
+
+    //RCLCPP_INFO(this->get_logger(), "Ruta de aterrizaje asignada para el avion %s", avion_msg.id.c_str());
+}   
+
 void ATC::assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
     
     if (avion_msg.ruta_completada && avion_msg.waypoints.empty()) {
@@ -107,10 +163,10 @@ void ATC::assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
         update_msg.speed = avion_msg.speed;
         waypoints_pub_->publish(update_msg);
 
-        RCLCPP_INFO(this->get_logger(), "Ruta %s:", avion_msg.id.c_str());
+        /*RCLCPP_INFO(this->get_logger(), "Ruta %s:", avion_msg.id.c_str());
         for (size_t i = 0; i<route.size();i++) {
             RCLCPP_INFO(this->get_logger(), "Waypoint %zu: [%.2f, %.2f, %.2f]", i, route[i].x, route[i].y, route[i].z);
-        }
+        } */
     }
 }
 
@@ -219,7 +275,8 @@ void ATC::adjustRoute(atc_sim_ros2::msg::Flight& avion) {
     update_msg.avion_id = avion.id; 
     update_msg.waypoints = avion.waypoints; 
     update_msg.speed = avion.speed;
-    waypoints_pub_->publish(update_msg); RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ruta ajustada para el avion %s", avion.id.c_str()); 
+    waypoints_pub_->publish(update_msg); 
+    //RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ruta ajustada para el avion %s", avion.id.c_str()); 
 }
 
 int ATC::selectLeastAssignedDestination() {
@@ -258,7 +315,7 @@ void ATC::checkCollisions(atc_sim_ros2::msg::ListaAviones::SharedPtr msg) {
     for (size_t i = 0; i < aviones.size(); i++) {
         for (size_t j = i+1; j < aviones.size(); j++) {
            
-           if (routesTooClose(aviones[i], aviones[j], 1.0)) { // Umbral de 1
+           if (routesTooClose(aviones[i], aviones[j], 2.0)) { // Umbral de 2
                 RCLCPP_WARN(this->get_logger(), " Rutas demasiado cercanas entre %s y %s", aviones[i].id.c_str(), aviones[j].id.c_str());
                 adjustTrajectory(aviones[i], aviones[j]);
            }
@@ -286,9 +343,13 @@ void ATC::checkCollisions(atc_sim_ros2::msg::ListaAviones::SharedPtr msg) {
             waypoints_pub_->publish(update2);
 
             // Eliminar los aviones de la lista
-            aviones.erase(aviones.begin() + j);
-            aviones.erase(aviones.begin() + i);
-
+            if (i < j) {
+                aviones.erase(aviones.begin() + j);
+                aviones.erase(aviones.begin() + i);
+            } else {
+                aviones.erase(aviones.begin() + i);
+                aviones.erase(aviones.begin() + j);
+            }
             break;
            }
         }
@@ -302,22 +363,25 @@ bool ATC::routesTooClose(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_
         return false;
     }
 
-    const int num_points = 100;
+    const int num_points = 50;
     std::vector<atc_sim_ros2::msg::Waypoint> puntos_trayectoria1 = generateTrajectoryPoints(avion1, avion1.waypoints[0], num_points);
     std::vector<atc_sim_ros2::msg::Waypoint> puntos_trayectoria2 = generateTrajectoryPoints(avion2, avion2.waypoints[0], num_points);
 
     //Compara cada punto de la trayectoria 1 con cada punto de la trayectoria 2
+    double min_distance = std::numeric_limits<double>::max();
     for (const auto& punto1 : puntos_trayectoria1) {
         for (const auto& punto2 : puntos_trayectoria2) {
             double dx = punto1.x - punto2.x;
             double dy = punto1.y - punto2.y;
             double dz = punto1.z - punto2.z;
             double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
-            if (distance < threshold_distance) {
-                RCLCPP_WARN(this->get_logger(), "Proximidad detectada entre %s y %s con distancia %.2f", avion1.id.c_str(), avion2.id.c_str(), distance);
-                return true;
-            }
+            min_distance = std::min(min_distance, distance);
         }
+    }
+
+    if (min_distance < threshold_distance) {
+        //RCLCPP_WARN(this->get_logger(), "Proximidad detectada entre %s y %s con distancia %.2f", avion1.id.c_str(), avion2.id.c_str(), distance);
+        return true;
     }
     return false;
 }
@@ -346,7 +410,7 @@ bool ATC::areTooClose(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros
     double dz = avion1.posz - avion2.posz;
 
     double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
-    RCLCPP_DEBUG(this->get_logger(), "Distancia actual entre %s y %s: %.2f", avion1.id.c_str(), avion2.id.c_str(), distance);
+    //RCLCPP_DEBUG(this->get_logger(), "Distancia actual entre %s y %s: %.2f", avion1.id.c_str(), avion2.id.c_str(), distance);
 
     return distance < threshold_distance;
 }
@@ -410,8 +474,8 @@ bool ATC::areRoutesIntersecting(const atc_sim_ros2::msg::Flight& avion1, const a
             
 
             if (std::abs(time_to_wp1 - time_to_wp2) < 0.2) { // No son 0.06 segundos si no 6 "simulaciones"
-                RCLCPP_WARN(this->get_logger(), "Intersección detectada POR MISMO WAYPOINT entre %s y %s ", avion1.id.c_str(), avion2.id.c_str());
-               RCLCPP_INFO(this->get_logger(), "Tiempo: %.2f, %.2f . Dif: %.2f", time_to_wp1, time_to_wp2, std::abs(time_to_wp1 - time_to_wp2));
+               //RCLCPP_WARN(this->get_logger(), "Intersección detectada POR MISMO WAYPOINT entre %s y %s ", avion1.id.c_str(), avion2.id.c_str());
+               //RCLCPP_INFO(this->get_logger(), "Tiempo: %.2f, %.2f . Dif: %.2f", time_to_wp1, time_to_wp2, std::abs(time_to_wp1 - time_to_wp2));
                 return true;
             }
     }
@@ -425,8 +489,8 @@ bool ATC::areRoutesIntersecting(const atc_sim_ros2::msg::Flight& avion1, const a
     double time_to_wp2 = calculateTimeToWaypoint(avion2, result->x, result->y, result->z);
 
     if (std::abs(time_to_wp1 - time_to_wp2) < 0.2) {
-        RCLCPP_WARN(this->get_logger(), "Intersección detectada entre %s y %s en (%.2f, %.2f, %.2f)", avion1.id.c_str(), avion2.id.c_str(), result->x, result->y, result->z);
-        RCLCPP_INFO(this->get_logger(), "Tiempo: %.2f, %.2f . Dif: %.2f", time_to_wp1, time_to_wp2, std::abs(time_to_wp1 - time_to_wp2));
+        //RCLCPP_WARN(this->get_logger(), "Intersección detectada entre %s y %s en (%.2f, %.2f, %.2f)", avion1.id.c_str(), avion2.id.c_str(), result->x, result->y, result->z);
+        //RCLCPP_INFO(this->get_logger(), "Tiempo: %.2f, %.2f . Dif: %.2f", time_to_wp1, time_to_wp2, std::abs(time_to_wp1 - time_to_wp2));
         return true;
     }
 
@@ -464,6 +528,20 @@ bool ATC::checkWaypointInCircuitOrClose(const atc_sim_ros2::msg::Flight& avion) 
     return false;
 }
 
+bool ATC::checkWaypointExit(const atc_sim_ros2::msg::Flight& avion) {
+    if (avion.waypoints.empty()) {
+        return false;
+    }
+
+    const auto& next_wp = avion.waypoints.front();
+    // Distancia al wp de salida del circuito
+
+    if ((next_wp.x == 20.0 && next_wp.y == 30.0 && next_wp.z == 5.0) ) {
+        return true;
+    }
+    return false;
+}
+
 void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
     bool avoidCollision = false;
     RCLCPP_INFO(this->get_logger(), "Ajustando la trayectoria para %s y %s", avion1.id.c_str(), avion2.id.c_str());
@@ -472,12 +550,13 @@ void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg:
     bool avion1_near_circuit = checkWaypointInCircuitOrClose(avion1);
     bool avion2_near_circuit = checkWaypointInCircuitOrClose(avion2);
 
-    if (!avoidCollision) {
-        // Paso 1: Ajustar la velocidad de los aviones
-        adjustSpeed(avion1, avion2);
-        if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
-            avoidCollision = true;
-        }
+    bool avion1_exit = checkWaypointExit(avion1);
+    bool avion2_exit = checkWaypointExit(avion2);
+
+    // Paso 1: Ajustar la velocidad de los aviones
+    adjustSpeed(avion1, avion2);
+    if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
+        avoidCollision = true;
     }
     
     // Si no se ha evitado la colision con la velocidad se intenta ajustando la altura
@@ -502,8 +581,9 @@ void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg:
             adjustRoute(avion1);
         } else if (avion2_near_circuit) {
             adjustRoute(avion2);
-        } else {
+        } else if (!avion1_exit && !avion2_exit){ // No ajustar los waypoints si alguno de los aviones está en ruta de salida
             // Paso 3: Desplazar los waypoints de uno de los aviones
+            // Este paso NO se puede aplicar a un avion que esté en el punto de salida
             adjustNextWaypoint(avion1, avion2);
         }
         
@@ -511,33 +591,15 @@ void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg:
             avoidCollision = true;
         }
     }
-    
-    /*if (!avoidCollision) {
-        // Paso 1: Ajustar la velocidad de los aviones
+
+    if (!avoidCollision) {
         adjustSpeed(avion1, avion2);
         if (checkCollisionAfterAdjustment(avion1, avion2)) { // Se verifica si la colisión sigue ocurriendo
             avoidCollision = true;
         }
-    }*/
-
-   /*
-    // Se pueden añadir más ajustes, quedaría cambiar ruta
-    if (!avoidCollision) {
-        RCLCPP_WARN(this->get_logger(), "Colisión no evitada entre %s y %s", avion1.id.c_str(), avion2.id.c_str());
-    }
-    */
-
-    /*
-    if (areRoutesIntersecting(avion1, avion2)){
-        // Paso 2: Ajustar la altitud de ambos aviones
-        adjustAltitude(avion1, avion2);
     }
     
-    if (routesTooClose(avion1, avion2, 1.0)) { // Umbral de 1
-        RCLCPP_INFO(this->get_logger(), "La colisión persiste. Intentando ajustar altitud");
-        adjustAltitude(avion1, avion2);
-    }
-    */
+    
     
 }
 
@@ -620,7 +682,7 @@ void ATC::adjustAltitude(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::F
     }
 
      // Se generan nuevos waypoints intermedios
-    int num_intermedios = 2;
+    int num_intermedios = 1;
     std::vector<atc_sim_ros2::msg::Waypoint> waypoints1 = generateIntermediateWaypoints(nuevo_wp1, final_destination1, num_intermedios);
     std::vector<atc_sim_ros2::msg::Waypoint> waypoints2 = generateIntermediateWaypoints(nuevo_wp2, final_destination2, num_intermedios);
 
@@ -763,7 +825,7 @@ void ATC::adjustNextWaypoint(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::ms
     // Se añade el waypoint desplazado al inicio de la lista de waypoints de cada avion
     avion1.waypoints.insert(avion1.waypoints.begin(), new_wp1);
     // Se generan los nuevos waypoints intermedios
-    std::vector<atc_sim_ros2::msg::Waypoint> new_waypoints1 = generateIntermediateWaypoints(new_wp1, final_destination1, 2);
+    std::vector<atc_sim_ros2::msg::Waypoint> new_waypoints1 = generateIntermediateWaypoints(new_wp1, final_destination1, 1);
     // Se insertan los waypoints intermedios
     avion1.waypoints.insert(avion1.waypoints.begin() + 1, new_waypoints1.begin(), new_waypoints1.end());
     // Publicar la actualización
@@ -824,10 +886,10 @@ atc_sim_ros2::msg::Waypoint ATC::createLateralDisplacedWaypoint(atc_sim_ros2::ms
 }
 
 void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2) {
-    RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ajustando velocidades de %s y %s para evitar colision", avion1.id.c_str(), avion2.id.c_str());
+    //RCLCPP_INFO(rclcpp::get_logger("atc_logger"), "Ajustando velocidades de %s y %s para evitar colision", avion1.id.c_str(), avion2.id.c_str());
     // Parámetros configurables
     const double min_speed = 10.0;
-    const double max_speed = 25.0;
+    const double max_speed = 30.0;
     const double speed_adjustment = 5.0;
     double threshold_distance = 1.0;
 

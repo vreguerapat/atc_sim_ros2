@@ -29,6 +29,8 @@ class Aeropuerto : public rclcpp::Node {
         rclcpp::TimerBase::SharedPtr avion_timer_;
         std::vector<Avion> lista_aviones_;
         std::vector<std::array<float,3>> waypoints_;
+        int lado;
+        int aviones_totales;
 
 
         void update_airport(double delta_time);

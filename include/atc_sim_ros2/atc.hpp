@@ -28,7 +28,9 @@ class ATC : public rclcpp::Node {
     std::vector<atc_sim_ros2::msg::Waypoint> waypoints_destino_;
     std::vector<int> contador_destinos_; 
     int contador_colisiones_;
+    bool landing;
     std::vector<atc_sim_ros2::msg::Waypoint> circuit_waypoints_; 
+    std::vector<atc_sim_ros2::msg::Waypoint> landing_route_; 
 
     atc_sim_ros2::msg::ListaAviones::SharedPtr aviones_lista_;
 
@@ -38,6 +40,7 @@ class ATC : public rclcpp::Node {
     void avionesCallback(const atc_sim_ros2::msg::ListaAviones::SharedPtr msg);
     void manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_aviones);
     void assignRoute(atc_sim_ros2::msg::Flight& avion_msg);
+    void assignLandingRoute(atc_sim_ros2::msg::Flight& avion_msg);
     std::vector<atc_sim_ros2::msg::Waypoint> generateRoute(const atc_sim_ros2::msg::Waypoint start_waypoint, atc_sim_ros2::msg::Flight& avion_msg);
     atc_sim_ros2::msg::Waypoint findClosestWaypoint(double pos_x, double pos_y, double pos_z);
     void adjustRoute(atc_sim_ros2::msg::Flight& avion_msg);
@@ -50,6 +53,7 @@ class ATC : public rclcpp::Node {
     bool areRoutesIntersecting(const atc_sim_ros2::msg::Flight& avion1, const atc_sim_ros2::msg::Flight& avion2);
     double calculateTimeToWaypoint(const atc_sim_ros2::msg::Flight& avion, double x, double y, double z) ;
     bool checkWaypointInCircuitOrClose(const atc_sim_ros2::msg::Flight& avion);
+    bool checkWaypointExit(const atc_sim_ros2::msg::Flight& avion);
     void adjustTrajectory(atc_sim_ros2::msg::Flight& avion_msg, atc_sim_ros2::msg::Flight& otro_avion);
     bool checkCollisionAfterAdjustment(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2);
     void adjustAltitude(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flight& avion2);

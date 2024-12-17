@@ -25,7 +25,7 @@ Aeropuerto::Aeropuerto() : Node("aeropuerto")
 }
 
 void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoint_update) {
-    RCLCPP_INFO(this->get_logger(), "Recibiendo waypoints para el avion %s", waypoint_update.avion_id.c_str());
+    //RCLCPP_INFO(this->get_logger(), "Recibiendo waypoints para el avion %s", waypoint_update.avion_id.c_str());
     
     // Primero se verifica si la lista de waypoints está vacía para eliminar el avion
     if (waypoint_update.waypoints.empty()) {
@@ -41,7 +41,7 @@ void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoi
             avion.clearWaypoints();
             avion.addWaypoints(waypoint_update.waypoints);
             avion.setSpeed(waypoint_update.speed);
-            RCLCPP_INFO(this->get_logger(), "Waypoints y velocidad actualizados para el avion %s", avion.getID().c_str());
+            //RCLCPP_INFO(this->get_logger(), "Waypoints y velocidad actualizados para el avion %s", avion.getID().c_str());
         }
     }
     }
@@ -82,9 +82,10 @@ void Aeropuerto::agregarAvion()
             double target_y = 20.0;
             double bearing = std::atan2(target_y - new_pos_y, target_x - new_pos_x);
             nuevo_avion.setBearing(bearing);
-            RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion");
+            RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion. X: %.2f, Y: %.2f", new_pos_x, new_pos_y);
             lista_aviones_.push_back(nuevo_avion);
-            RCLCPP_INFO(this->get_logger(), "Total aviones simulados: %ld", lista_aviones_.size());
+            aviones_totales += 1;
+            RCLCPP_INFO(this->get_logger(), "TOTAL PLANES: %d", aviones_totales);
         } else {
             // Si sigue estando demasiado cerca se intenta de nuevo
             attempts++;
@@ -110,30 +111,30 @@ double Aeropuerto::generateRandomCoordinate() {
 }
 
 double Aeropuerto::generateRandomCoordinateX() {
-    int lado = rand() % 3; // Selecciona un lado (0,1,2)
+    lado = rand() % 3; // Selecciona un lado (0,1,2)
 
     switch (lado) {
         case 0: // Lado 1 (vertical)
-            return 50.0 + static_cast<double>(rand() % 11); // Rango [50, 60]
+            return 45.0 + static_cast<double>(rand() % 6); // Rango [45, 50]
         case 1: // Lado 2 (horizontal superior)
-            return 50.0 + static_cast<double>(rand() % 6); // Rango [50, 55]
+            return static_cast<double>(rand() % 51); // Rango [0, 50]
         case 2: // Lado 3 (horizontal inferior)
-            return -15.0 + static_cast<double>(rand() % 31); // Rango [-15, 15]
+            return static_cast<double>(rand() % 51); // Rango [0, 50]
         default:
             return 55.0; // Caso de error
     }
 }
 
 double Aeropuerto::generateRandomCoordinateY() {
-    int lado = rand() % 3; // Selecciona un lado (0,1,2)
+    //int lado = rand() % 3; // Selecciona un lado (0,1,2)
 
     switch (lado) {
         case 0: // Lado 1 (vertical)
-            return -15.0 + static_cast<double>(rand() % 31); // Rango [-15, 15]
+            return static_cast<double>(rand() % 41); // Rango [0, 40]
         case 1: // Lado 2 (horizontal superior)
-            return 50.0 + static_cast<double>(rand() % 6); // Rango [50, 55] 
+            return 40.0 + static_cast<double>(rand() % 6); // Rango [40, 45] 
         case 2: // Lado 3 (horizontal inferior)
-            return -15.0 + static_cast<double>(rand() % 6); // Rango [-15, -20]
+            return -5.0 + static_cast<double>(rand() % 6); // Rango [-5, 0]
         default: 
             return 55.0; // Caso de error
         

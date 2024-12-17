@@ -7,16 +7,16 @@
 
 Avion::Avion() 
 {
-    
     airline_ = assignRandomAirline();
     id_ = generateRandomID();
     posx_ = generateRandomPosition(true, false);
     posy_ = generateRandomPosition(true, false);
     posz_ = generateRandomPosition(false, true);
     bearing_ = generateBearing();
-    speed_ = 10.0;
+    speed_ = 20.0;
     reached_waypoint_ = false;
     ruta_completada_ = false;
+    landings_ = 0;
 }
 
 std::string Avion::getID() const { return id_; }
@@ -190,7 +190,7 @@ void Avion::update(double delta_time)
 
     if (!reached_waypoint_){
         // Margen de distancia al waypoint
-        double waypoint_threshold = 0.8;
+        double waypoint_threshold = 1;
         //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Distance to waypoint: %.2f", distance_to_waypoint);
 
         if (distance_to_waypoint < waypoint_threshold) {
@@ -204,7 +204,8 @@ void Avion::update(double delta_time)
 
             if (waypoints_.empty()) {
                 ruta_completada_ = true;
-                //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion %s ha comletado su ruta", id_.c_str());
+                landings_ += 1;
+                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "TOTAL LANDINGS: %d", landings_);
                 //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", id_.c_str(), ruta_completada_ ? "Sí" : "No", waypoints_.empty() ? "Sí" : "No");
         
             }
@@ -217,7 +218,7 @@ void Avion::update(double delta_time)
             if (angle_difference > M_PI) angle_difference -= 2 * M_PI;
             if (angle_difference < -M_PI) angle_difference += 2 * M_PI;
 
-            double rotation_speed = 5.0 * delta_time;
+            double rotation_speed = 10.0 * delta_time;
             if (std::abs(angle_difference) < rotation_speed) {
             bearing_ = target_bearing;
             } else {
@@ -225,7 +226,7 @@ void Avion::update(double delta_time)
             }
            //bearing_ += (std::abs(angle_difference) < rotation_speed) ? angle_difference : (angle_difference > 0 ? rotation_speed : -rotation_speed);
 
-            double climb_rate = 5.0 * delta_time;
+            double climb_rate = 8.0 * delta_time;
             if (std::abs(dz) < climb_rate) {
                 posz_ = target_waypoint_.z;
             } else {

@@ -52,6 +52,7 @@ class Avion {
         double posx_, posy_, posz_, speed_, bearing_;
         bool reached_waypoint_;
         bool ruta_completada_;
+        int landings_; 
         atc_sim_ros2::msg::Waypoint target_waypoint_;
 
         std::vector<atc_sim_ros2::msg::Waypoint> waypoints_;
