@@ -17,7 +17,8 @@ using namespace std::chrono_literals;
 
 ATC::ATC() : Node("atc"), 
              contador_colisiones_(0),
-             landing(false)
+             landing32L(false),
+             landing32R(false)
               
 {
     aviones_sub_ = this->create_subscription<atc_sim_ros2::msg::ListaAviones>( "lista_aviones", 10, std::bind(&ATC::avionesCallback, this, std::placeholders::_1));
@@ -40,16 +41,35 @@ ATC::ATC() : Node("atc"),
     wp6.x = 20.0; wp6.y = 10.0; wp6.z = 5.0;
     wp7.x = 30.0; wp7.y = 5.0; wp7.z = 5.0;
     wp8.x = 37.0; wp8.y = 10.0; wp8.z = 5.0;
-    circuit_waypoints_ = {wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8}; 
+    circuit1_ = {wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8}; 
 
     waypoints_destino_ = {destino1, destino2};
     contador_destinos_ =  {0,0}; 
 
     atc_sim_ros2::msg::Waypoint wp9, wp10, wp11;
     wp9.x = 10.0; wp9.y = 25.0; wp9.z = 5.0;
-    wp10.x = 0.0; wp10.y = 15.0; wp10.z = 5.0;
-    wp11.x = 0.0; wp11.y = 0.0; wp11.z = 0.0;
-    landing_route_ = {wp4, wp9, wp10, wp11};
+    wp10.x = 5.0; wp10.y = 15.0; wp10.z = 5.0;
+    wp11.x = 5.0; wp11.y = 0.0; wp11.z = 0.0;
+    landing_route32L_ = {wp4, wp9, wp10, wp11};
+
+    // Waypoints segundo circuito de espera
+    atc_sim_ros2::msg::Waypoint wp12, wp13, wp14, wp15, wp16, wp17, wp18, wp19;
+    wp12.x = -40.0; wp12.y = 20.0; wp12.z = 5.0;
+    wp13.x = -37.0; wp13.y = 30.0; wp13.z = 5.0;
+    wp14.x = -30.0; wp14.y = 35.0; wp14.z = 5.0;
+    wp15.x = -20.0; wp15.y = 30.0; wp15.z = 5.0; //Wp salida
+    wp16.x = -17.0; wp16.y = 20.0; wp16.z = 5.0;
+    wp17.x = -20.0; wp17.y = 10.0; wp17.z = 5.0;
+    wp18.x = -30.0; wp18.y = 5.0; wp18.z = 5.0;
+    wp19.x = -37.0; wp19.y = 10.0; wp19.z = 5.0;
+    circuit2_ = {wp12, wp13, wp14, wp15, wp16, wp17, wp18, wp19};
+
+    // Segunda opcion landing
+    atc_sim_ros2::msg::Waypoint wp20, wp21, wp22;
+    wp20.x = -10.0; wp20.y = 25.0; wp20.z = 5.0;
+    wp21.x = -5.0; wp21.y = 15.0; wp21.z = 5.0;
+    wp22.x = -5.0; wp22.y = 0.0; wp22.z = 0.0;
+    landing_route32R_ = {wp15, wp20, wp21, wp22};
 
    
     collision_check_timer_ = this->create_wall_timer(
@@ -82,48 +102,101 @@ void ATC::manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_av
             //RCLCPP_INFO(this->get_logger(), "El avion %s ha aterrizado. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
         } else if (!avion_msg.waypoints.empty()) {
             // Caso para verificar si avion en waypoint de salida
-            RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+            //RCLCPP_INFO(this->get_logger(), "Valor de landing para pista 32L: %s", landing32L ? "true" : "false");
+            //RCLCPP_INFO(this->get_logger(), "Valor de landing para pista 32R: %s", landing32R ? "true" : "false");
+            //atc_sim_ros2::msg::Waypoint current_wp = avion_msg.waypoints.front();
+            atc_sim_ros2::msg::Waypoint current_wp;
+            current_wp.x = avion_msg.posx; current_wp.y = avion_msg.posy; current_wp.z = avion_msg.posz;
+            // Se identifica en que circuito está
+            const auto& selected_circuit = findCircuit(avion_msg);
+            RCLCPP_INFO(this->get_logger(), "Circuito seleccionado avion %s: %s", avion_msg.id.c_str(), selected_circuit == circuit1_ ? "Circuito1" : selected_circuit == circuit2_ ? "Circuito 2": "Ninguno");
+            // Se verifica si el avion está cerca del waypoint {10.0, 25.0, 5.0} o {-10.0, 25.0, 5.0ç para dar permiso de aterrizaje a otro avion
+            atc_sim_ros2::msg::Waypoint landing_wp1, landing_wp2;
+            landing_wp1.x = 10.0; landing_wp1.y = 25.0; landing_wp1.z = 5.0;
+            landing_wp2.x = -10.0; landing_wp2.y = 25.0; landing_wp2.z = 5.0;
             
-            atc_sim_ros2::msg::Waypoint current_wp = avion_msg.waypoints.front();
+           atc_sim_ros2::msg::Waypoint next_wp = avion_msg.waypoints.front();
+           if (next_wp == landing_wp1){
+                double distance_to_landing_wp = distanceBetweenWaypoints(current_wp, landing_wp1);
+                if (distance_to_landing_wp <= 1) {
+                    anding32L = false;
+                    RCLCPP_INFO(this->get_logger(), "El avion %s está en el waypoint de liberación de aterrizaje del circuito 1. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
+                    
+                }
+           }
 
-            // Se verifica si el avion está cerca del waypoint {10.0, 25.0, 5.0} para dar permiso de aterrizaje a otro avion
-            atc_sim_ros2::msg::Waypoint landing_wp;
-            landing_wp.x = 10.0; landing_wp.y = 25.0; landing_wp.z = 5.0;
-            double distance_to_landing_wp = distanceBetweenWaypoints(current_wp, landing_wp);
-
-            if (distance_to_landing_wp <= 2) {
-                landing = false;
-                RCLCPP_INFO(this->get_logger(), "El avion %s está en el waypoint de liberación de aterrizaje. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
+           if (next_wp == landing_wp2){
+                double distance_to_landing_wp = distanceBetweenWaypoints(current_wp, landing_wp2);
+                if (distance_to_landing_wp <= 1) {
+                    landing32R = false;
+                    RCLCPP_INFO(this->get_logger(), "El avion %s está en el waypoint de liberación de aterrizaje del circuito 2. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
+                    
+                }
+           }
+            
+            // Se verifica si el avion está cerca del waypoint de salida
+            atc_sim_ros2::msg::Waypoint exit_wp;
+            if (selected_circuit == circuit1_) {
+                exit_wp.x = 20.0; exit_wp.y = 30.0; exit_wp.z = 5.0;
+            } else if (selected_circuit == circuit2_) {
+                exit_wp.x = -20.0; exit_wp.y = 30.0; exit_wp.z = 5.0;
             }
 
-            atc_sim_ros2::msg::Waypoint exit_wp;
-            exit_wp.x = 20.0; exit_wp.y = 30.0; exit_wp.z = 5.0;  
-            double distance = distanceBetweenWaypoints(current_wp, exit_wp);
-
-            if (distance <= 3) {
-                if (!landing) {
-                    //RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
-                    RCLCPP_INFO(this->get_logger(), "AssignLandingRoute para %s", avion_msg.id.c_str());
-                    assignLandingRoute(avion_msg);
-                    landing = true;
-                    RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
-                    return;
-                } else if (!landing){
-                    //RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
-                    RCLCPP_INFO(this->get_logger(), "AssignRoute para %s", avion_msg.id.c_str());
-                    avion_msg.waypoints.clear();
-                    //RCLCPP_INFO(this->get_logger(), "Valor de landing: %s", landing ? "true" : "false");
+            double distance_to_exit_wp = distanceBetweenWaypoints(current_wp, exit_wp);
+            
+            if (distance_to_exit_wp <= 3) {
+                if (selected_circuit == circuit1_ && !landing32L) {
+                    assignLandingRoute32L(avion_msg);
+                    landing32L = true;
+                    //RCLCPP_INFO(this->get_logger(), "Valor de landing para pista 32L: %s", landing32L ? "true" : "false");
+                } else if (selected_circuit == circuit2_ && !landing32R) {
+                    assignLandingRoute32R(avion_msg);
+                    landing32R = true;
+                    //RCLCPP_INFO(this->get_logger(), "Valor de landing para pista 32R: %s", landing32R ? "true" : "false");
+                } else if ((selected_circuit == circuit1_ && !landing32L) || (selected_circuit == circuit2_ && !landing32R)) {
+                    //RCLCPP_ERROR(this->get_logger(), "AQUIIIII");
                     assignRoute(avion_msg);
                 }
             }
+
+            
         }
     }
 
 }
 
-void ATC::assignLandingRoute(atc_sim_ros2::msg::Flight& avion_msg) {
+const std::vector<atc_sim_ros2::msg::Waypoint>& ATC::findCircuit(const atc_sim_ros2::msg::Flight& avion_msg) {
+    for (const auto& avion_wp : avion_msg.waypoints) {
+        // Se verifica si el wp mas cercano pertenece al circuito 1
+        auto it_circuit1 = std::find_if(circuit1_.begin(), circuit1_.end(), [&avion_wp](const atc_sim_ros2::msg::Waypoint& wp) {
+            return wp.x == avion_wp.x && wp.y == avion_wp.y && wp.z == avion_wp.z;
+        });
+
+        if (it_circuit1 != circuit1_.end()) {
+            return circuit1_;
+        }
+
+        // Se verifica si el wp mas cercano pertenece al circuito 1
+        auto it_circuit2 = std::find_if(circuit2_.begin(), circuit2_.end(), [&avion_wp](const atc_sim_ros2::msg::Waypoint& wp) {
+            return wp.x == avion_wp.x && wp.y == avion_wp.y && wp.z == avion_wp.z;
+        });
+
+        if (it_circuit2 != circuit2_.end()) {
+            return circuit2_;
+        }
+
+    }
+    
+
+    // Si no se encuentra ninguno de los circuitos
+    RCLCPP_WARN(this->get_logger(), "El avion %s no pertenece a ningún circuito", avion_msg.id.c_str());
+    static std::vector<atc_sim_ros2::msg::Waypoint> empty_circuit;
+    return empty_circuit;
+}
+
+void ATC::assignLandingRoute32L(atc_sim_ros2::msg::Flight& avion_msg) {
     avion_msg.waypoints.clear();
-    avion_msg.waypoints = landing_route_; 
+    avion_msg.waypoints = landing_route32L_; 
 
     atc_sim_ros2::msg::WaypointUpdate update_msg;
     update_msg.avion_id = avion_msg.id;
@@ -134,6 +207,19 @@ void ATC::assignLandingRoute(atc_sim_ros2::msg::Flight& avion_msg) {
     //RCLCPP_INFO(this->get_logger(), "Ruta de aterrizaje asignada para el avion %s", avion_msg.id.c_str());
 }   
 
+void ATC::assignLandingRoute32R(atc_sim_ros2::msg::Flight& avion_msg) {
+    avion_msg.waypoints.clear();
+    avion_msg.waypoints = landing_route32R_; 
+
+    atc_sim_ros2::msg::WaypointUpdate update_msg;
+    update_msg.avion_id = avion_msg.id;
+    update_msg.waypoints = avion_msg.waypoints;
+    update_msg.speed = 25.0; // AQUI HE PUESTO VELOCIDAD FIJA
+    waypoints_pub_->publish(update_msg);
+
+    //RCLCPP_INFO(this->get_logger(), "Ruta de aterrizaje asignada para el avion %s", avion_msg.id.c_str());
+}  
+
 void ATC::assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
     
     if (avion_msg.ruta_completada && avion_msg.waypoints.empty()) {
@@ -141,21 +227,25 @@ void ATC::assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
     }
     // Se identifica el wp mas cercano del circuito de espera
     atc_sim_ros2::msg::Waypoint closest_waypoint = findClosestWaypoint(avion_msg.posx, avion_msg.posy, avion_msg.posz);
-    // Primero encuentra la posicion del wp mas cercano
-    auto it = std::find_if(circuit_waypoints_.begin(), circuit_waypoints_.end(), [&closest_waypoint](const atc_sim_ros2::msg::Waypoint& wp) {
+    // Se ha de determinar a que circuito pertenece el waypoint mas cercano
+    const std::vector<atc_sim_ros2::msg::Waypoint>& selected_circuit = (std::find_if(circuit1_.begin(), circuit1_.end(), [&closest_waypoint](const atc_sim_ros2::msg::Waypoint& wp) {
+        return wp.x == closest_waypoint.x && wp.y == closest_waypoint.y && wp.z == closest_waypoint.z;
+    }) != circuit1_.end()) ? circuit1_ : circuit2_;
+
+    auto it = std::find_if(selected_circuit.begin(), selected_circuit.end(), [&closest_waypoint](const atc_sim_ros2::msg::Waypoint& wp) {
         return wp.x == closest_waypoint.x && wp.y == closest_waypoint.y && wp.z == closest_waypoint.z;
     });
 
-    if (it != circuit_waypoints_.end()) {
+    if (it != selected_circuit.end()) {
          // Se obtiene el indice del wp mas cercano
-        size_t closest_index = std::distance(circuit_waypoints_.begin(), it);
+        size_t closest_index = std::distance(selected_circuit.begin(), it);
         // El siguiente wp al mas cercano
-        size_t next_index = (closest_index + 1) % circuit_waypoints_.size();
+        size_t next_index = (closest_index + 1) % selected_circuit.size();
 
-        atc_sim_ros2::msg::Waypoint next_wp = circuit_waypoints_[next_index];
+        atc_sim_ros2::msg::Waypoint next_wp = selected_circuit[next_index];
 
         // Se genera la ruta completa del circuito de espera
-        std::vector<atc_sim_ros2::msg::Waypoint> route = generateRoute(next_wp, avion_msg);
+        std::vector<atc_sim_ros2::msg::Waypoint> route = generateRoute(next_wp, avion_msg, selected_circuit);
 
         atc_sim_ros2::msg::WaypointUpdate update_msg;
         update_msg.avion_id = avion_msg.id;
@@ -163,14 +253,14 @@ void ATC::assignRoute (atc_sim_ros2::msg::Flight& avion_msg) {
         update_msg.speed = avion_msg.speed;
         waypoints_pub_->publish(update_msg);
 
-        /*RCLCPP_INFO(this->get_logger(), "Ruta %s:", avion_msg.id.c_str());
-        for (size_t i = 0; i<route.size();i++) {
+        RCLCPP_INFO(this->get_logger(), "Se asignó el %s al avion %s", (&selected_circuit == &circuit1_ ? "circuito 1" : "circuito 2"), avion_msg.id.c_str());
+        /*for (size_t i = 0; i<route.size();i++) {
             RCLCPP_INFO(this->get_logger(), "Waypoint %zu: [%.2f, %.2f, %.2f]", i, route[i].x, route[i].y, route[i].z);
         } */
     }
 }
 
-std::vector<atc_sim_ros2::msg::Waypoint> ATC::generateRoute(const atc_sim_ros2::msg::Waypoint start_waypoint, atc_sim_ros2::msg::Flight& avion_msg) {
+std::vector<atc_sim_ros2::msg::Waypoint> ATC::generateRoute(const atc_sim_ros2::msg::Waypoint start_waypoint, atc_sim_ros2::msg::Flight& avion_msg, const std::vector<atc_sim_ros2::msg::Waypoint>& circuit) {
     std::vector<atc_sim_ros2::msg::Waypoint> route;
     atc_sim_ros2::msg::Waypoint pos_avion;
     pos_avion.x = avion_msg.posx;
@@ -178,20 +268,20 @@ std::vector<atc_sim_ros2::msg::Waypoint> ATC::generateRoute(const atc_sim_ros2::
     pos_avion.z = avion_msg.posz;
 
     // Primero encuentra la posicion del wp mas cercano
-    auto it = std::find_if(circuit_waypoints_.begin(), circuit_waypoints_.end(), [&start_waypoint](const atc_sim_ros2::msg::Waypoint& wp) {
+    auto it = std::find_if(circuit.begin(), circuit.end(), [&start_waypoint](const atc_sim_ros2::msg::Waypoint& wp) {
         return wp.x == start_waypoint.x && wp.y == start_waypoint.y && wp.z == start_waypoint.z;
     });
 
-    if (it != circuit_waypoints_.end()) {
+    if (it != circuit.end()) {
             
         std::vector<atc_sim_ros2::msg::Waypoint> intermedios = generateIntermediateWaypoints(pos_avion, start_waypoint, 1);
         route.insert(route.end(), intermedios.begin(), intermedios.end());
         // Primero se añaden los waypoints desde el más cercano al ultimo de la lista
-        route.insert(route.end(), it, circuit_waypoints_.end());
+        route.insert(route.end(), it, circuit.end());
 
-        if (it != circuit_waypoints_.begin()) {
+        if (it != circuit.begin()) {
             // Y ahora desde el inicio de la lista hasta el más cercano
-            route.insert(route.end(), circuit_waypoints_.begin(), it);
+            route.insert(route.end(), circuit.begin(), it);
         }
 
         route.push_back(start_waypoint);
@@ -216,7 +306,8 @@ atc_sim_ros2::msg::Waypoint ATC::findClosestWaypoint(double pos_x, double pos_y,
     double min_distance = std::numeric_limits<double>::max();
     atc_sim_ros2::msg::Waypoint closest_waypoint;
 
-    for (const auto& wp : circuit_waypoints_) {
+    // Se busca en el primer circuito
+    for (const auto& wp : circuit1_) {
         double dx = wp.x - pos_x;
         double dy = wp.y - pos_y;
         double dz = wp.z - pos_z;
@@ -227,6 +318,19 @@ atc_sim_ros2::msg::Waypoint ATC::findClosestWaypoint(double pos_x, double pos_y,
             closest_waypoint = wp;
         }
     }
+    // Y en el segundo
+    for (const auto& wp : circuit2_) {
+        double dx = wp.x - pos_x;
+        double dy = wp.y - pos_y;
+        double dz = wp.z - pos_z;
+        double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distance < min_distance) {
+            min_distance = distance;
+            closest_waypoint = wp;
+        }
+    }
+
     return closest_waypoint;
 }
 
@@ -238,17 +342,17 @@ void ATC::adjustRoute(atc_sim_ros2::msg::Flight& avion) {
     const atc_sim_ros2::msg::Waypoint& first_wp = avion.waypoints.front();
 
     // Se busca el primer waypoint que pertenezca al circuito de espera
-    auto it = std::find_if(circuit_waypoints_.begin(),circuit_waypoints_.end(), [&first_wp](const atc_sim_ros2::msg::Waypoint& wp) {
+    auto it = std::find_if(circuit1_.begin(),circuit1_.end(), [&first_wp](const atc_sim_ros2::msg::Waypoint& wp) {
         return wp.x == first_wp.x && wp.y == first_wp.y && wp.z == first_wp.z;
     });
 
-    if (it != circuit_waypoints_.end()) {
+    if (it != circuit1_.end()) {
          // Se obtiene el indice del wp mas cercano
-        size_t closest_index = std::distance(circuit_waypoints_.begin(), it);
+        size_t closest_index = std::distance(circuit1_.begin(), it);
         // El siguiente wp al mas cercano
-        size_t next_index = (closest_index + 1) % circuit_waypoints_.size();
+        size_t next_index = (closest_index + 1) % circuit1_.size();
 
-        atc_sim_ros2::msg::Waypoint next_wp = circuit_waypoints_[next_index];
+        atc_sim_ros2::msg::Waypoint next_wp = circuit1_[next_index];
 
         // Se eliminan los waypoints intermedios hasta el segundo waypoint del circuito
         auto wp_it = std::find_if(avion.waypoints.begin(), avion.waypoints.end(), [&next_wp](const atc_sim_ros2::msg::Waypoint& wp) {
@@ -520,11 +624,18 @@ bool ATC::checkWaypointInCircuitOrClose(const atc_sim_ros2::msg::Flight& avion) 
 
     double threshold_distance = 3.0; // Distancia al wp del circuito
 
-    for (const auto& circuit_wp : circuit_waypoints_) {
+    for (const auto& circuit_wp : circuit1_) {
         if ((next_wp.x == circuit_wp.x && next_wp.y == circuit_wp.y && next_wp.z == circuit_wp.z) || distanceBetweenWaypoints(start, circuit_wp) <= threshold_distance) {
             return true;
         }
     }
+
+    for (const auto& circuit_wp : circuit2_) {
+        if ((next_wp.x == circuit_wp.x && next_wp.y == circuit_wp.y && next_wp.z == circuit_wp.z) || distanceBetweenWaypoints(start, circuit_wp) <= threshold_distance) {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -536,7 +647,8 @@ bool ATC::checkWaypointExit(const atc_sim_ros2::msg::Flight& avion) {
     const auto& next_wp = avion.waypoints.front();
     // Distancia al wp de salida del circuito
 
-    if ((next_wp.x == 20.0 && next_wp.y == 30.0 && next_wp.z == 5.0) ) {
+    if ((next_wp.x == 20.0 && next_wp.y == 30.0 && next_wp.z == 5.0) ||    // Salida circuito 1
+        (next_wp.x == -20.0 && next_wp.y == 30.0 && next_wp.z == 5.0) ) {  // Salida circuito 2
         return true;
     }
     return false;

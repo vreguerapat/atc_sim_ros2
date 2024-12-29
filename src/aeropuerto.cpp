@@ -29,10 +29,15 @@ void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoi
     
     // Primero se verifica si la lista de waypoints está vacía para eliminar el avion
     if (waypoint_update.waypoints.empty()) {
-        //lista_aviones_.erase(std::remove_if(lista_aviones_.begin(), lista_aviones_.end(), [&waypoint_update](const Avion& avion) {
-        //    return avion.getID() == waypoint_update.avion_id;
-        //}
-    //), lista_aviones_.end());
+        lista_aviones_.erase(
+            std::remove_if(
+                lista_aviones_.begin(), 
+                lista_aviones_.end(), 
+                [&waypoint_update](const Avion& avion) {
+                    return avion.getID() == waypoint_update.avion_id;
+                }
+            ), lista_aviones_.end()
+        );
 
     //RCLCPP_ERROR(this->get_logger(), "Avion %s eliminado de la lista de aviones", waypoint_update.avion_id.c_str());
     } else {
@@ -114,12 +119,14 @@ double Aeropuerto::generateRandomCoordinateX() {
     lado = rand() % 3; // Selecciona un lado (0,1,2)
 
     switch (lado) {
-        case 0: // Lado 1 (vertical)
+        case 0: // Lado 1 (vertical positivo)
             return 45.0 + static_cast<double>(rand() % 6); // Rango [45, 50]
         case 1: // Lado 2 (horizontal superior)
-            return static_cast<double>(rand() % 51); // Rango [0, 50]
+            return -50.0 + static_cast<double>(rand() % 101); // Rango [-50, 50]
         case 2: // Lado 3 (horizontal inferior)
-            return static_cast<double>(rand() % 51); // Rango [0, 50]
+            return -50.0 + static_cast<double>(rand() % 101); // Rango [-50, 50]
+        case 3: // Lado 4 (vertical negativo)
+            return -45.0 - static_cast<double>(rand() % 6); // Rango [-45, -50]
         default:
             return 55.0; // Caso de error
     }
@@ -135,6 +142,8 @@ double Aeropuerto::generateRandomCoordinateY() {
             return 40.0 + static_cast<double>(rand() % 6); // Rango [40, 45] 
         case 2: // Lado 3 (horizontal inferior)
             return -5.0 + static_cast<double>(rand() % 6); // Rango [-5, 0]
+        case 3: // Lado 4 (vertical negativo)
+            return static_cast<double>(rand() % 41); // Rango [0, 40]
         default: 
             return 55.0; // Caso de error
         

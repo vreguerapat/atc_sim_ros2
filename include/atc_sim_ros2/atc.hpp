@@ -28,9 +28,12 @@ class ATC : public rclcpp::Node {
     std::vector<atc_sim_ros2::msg::Waypoint> waypoints_destino_;
     std::vector<int> contador_destinos_; 
     int contador_colisiones_;
-    bool landing;
-    std::vector<atc_sim_ros2::msg::Waypoint> circuit_waypoints_; 
-    std::vector<atc_sim_ros2::msg::Waypoint> landing_route_; 
+    bool landing32L;
+    bool landing32R;
+    std::vector<atc_sim_ros2::msg::Waypoint> circuit1_; 
+    std::vector<atc_sim_ros2::msg::Waypoint> circuit2_;
+    std::vector<atc_sim_ros2::msg::Waypoint> landing_route32L_; 
+    std::vector<atc_sim_ros2::msg::Waypoint> landing_route32R_; 
 
     atc_sim_ros2::msg::ListaAviones::SharedPtr aviones_lista_;
 
@@ -40,8 +43,10 @@ class ATC : public rclcpp::Node {
     void avionesCallback(const atc_sim_ros2::msg::ListaAviones::SharedPtr msg);
     void manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_aviones);
     void assignRoute(atc_sim_ros2::msg::Flight& avion_msg);
-    void assignLandingRoute(atc_sim_ros2::msg::Flight& avion_msg);
-    std::vector<atc_sim_ros2::msg::Waypoint> generateRoute(const atc_sim_ros2::msg::Waypoint start_waypoint, atc_sim_ros2::msg::Flight& avion_msg);
+    const std::vector<atc_sim_ros2::msg::Waypoint>& findCircuit(const atc_sim_ros2::msg::Flight& avion_msg);
+    void assignLandingRoute32L(atc_sim_ros2::msg::Flight& avion_msg);
+    void assignLandingRoute32R(atc_sim_ros2::msg::Flight& avion_msg);
+    std::vector<atc_sim_ros2::msg::Waypoint> generateRoute(const atc_sim_ros2::msg::Waypoint start_waypoint, atc_sim_ros2::msg::Flight& avion_msg, const std::vector<atc_sim_ros2::msg::Waypoint>& circuit);
     atc_sim_ros2::msg::Waypoint findClosestWaypoint(double pos_x, double pos_y, double pos_z);
     void adjustRoute(atc_sim_ros2::msg::Flight& avion_msg);
     int selectLeastAssignedDestination();
