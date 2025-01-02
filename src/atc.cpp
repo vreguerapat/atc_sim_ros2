@@ -119,7 +119,7 @@ void ATC::manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_av
            if (next_wp == landing_wp1){
                 double distance_to_landing_wp = distanceBetweenWaypoints(current_wp, landing_wp1);
                 if (distance_to_landing_wp <= 1) {
-                    anding32L = false;
+                    landing32L = false;
                     RCLCPP_INFO(this->get_logger(), "El avion %s está en el waypoint de liberación de aterrizaje del circuito 1. Se permite el siguiente aterrizaje", avion_msg.id.c_str());
                     
                 }
