@@ -4,6 +4,7 @@
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
+    std::srand(std::time(nullptr));
     auto aeropuerto = std::make_shared<Aeropuerto>();
    
     rclcpp::spin(aeropuerto);

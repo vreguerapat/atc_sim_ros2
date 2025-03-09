@@ -38,7 +38,17 @@ Visualizador::Visualizador() : Node("visualizador")
         {-30.0, 5.0, 5.0},
         {-37.0, 10.0, 5.0}
     };
+
+    std::cout << "==========================\n";
+    std::cout << "    NODO VISUALIZADOR     \n";
+    std::cout << "==========================\n";
+    std::cout << "Nodo Visualizador iniciado correctamente.\n";
+    std::cout << "Publicando waypoints fijos...\n";
    
+}
+
+Visualizador::~Visualizador() {
+    RCLCPP_INFO(this->get_logger(), "El nodo Visualizador ha finalizado.");
 }
 
 void Visualizador::publicar_waypoints()
@@ -53,10 +63,10 @@ void Visualizador::publicar_waypoints()
         waypoint_marker.id = id++;
         waypoint_marker.type = visualization_msgs::msg::Marker::CYLINDER;
         waypoint_marker.action = visualization_msgs::msg::Marker::ADD;
-        waypoint_marker.scale.x = 0.5;
+        waypoint_marker.scale.x = 0.5; // 0.4
         waypoint_marker.scale.y = 0.5;
-        waypoint_marker.scale.z = 0.5;
-        waypoint_marker.color.a = 1.0;
+        waypoint_marker.scale.z = 0.3;
+        waypoint_marker.color.a = 1; //0.5
         waypoint_marker.color.g = 1.0;
         waypoint_marker.color.r = 0.0;
         waypoint_marker.color.b = 0.0;
@@ -67,6 +77,7 @@ void Visualizador::publicar_waypoints()
 
         marker_array.markers.push_back(waypoint_marker);
 
+        /*
         visualization_msgs::msg::Marker text_marker;
         text_marker.header.frame_id = "map";
         text_marker.header.stamp = this->now();
@@ -84,7 +95,7 @@ void Visualizador::publicar_waypoints()
         text_marker.pose.position.y = wp[1];
         text_marker.pose.position.z = wp[2] + 0.5;
         text_marker.text = "[" + std::to_string(wp[0]) + ", " + std::to_string(wp[1]) + ", " + std::to_string(wp[2]) + "]";
-        marker_array.markers.push_back(text_marker);
+        marker_array.markers.push_back(text_marker);*/
     }
     waypoint_marker_publisher_->publish(marker_array);
 
@@ -109,10 +120,11 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
     marker_array.markers.clear();
     
     int id = 0;
-            
+    
+    RCLCPP_INFO(this->get_logger(), "Recibida actualización de waypoints para %zu aviones.", msg_lista->aviones.size());
     for (const auto &avion_msg : msg_lista->aviones)
     {
-        RCLCPP_INFO(this->get_logger(), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", avion_msg.id.c_str(), avion_msg.ruta_completada ? "Sí" : "No", avion_msg.waypoints.empty() ? "Sí" : "No");
+        //RCLCPP_INFO(this->get_logger(), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", avion_msg.id.c_str(), avion_msg.ruta_completada ? "Sí" : "No", avion_msg.waypoints.empty() ? "Sí" : "No");
         
         // Marcado Avion, Flecha
         visualization_msgs::msg::Marker marker;
@@ -152,7 +164,7 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
         text_marker.action = visualization_msgs::msg::Marker::ADD;
         text_marker.scale.z = 0.5;
         text_marker.color.a = 1.0;
-        text_marker.color.r =1.0;
+        text_marker.color.r = 1.0;
         text_marker.color.g = 1.0;
         text_marker.color.b = 1.0;
         text_marker.lifetime = rclcpp::Duration(1s);
@@ -171,13 +183,13 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
             waypoint_marker.id = id++;
             waypoint_marker.type = visualization_msgs::msg::Marker::SPHERE;
             waypoint_marker.action = visualization_msgs::msg::Marker::ADD;
-            waypoint_marker.scale.x = 0.2;
-            waypoint_marker.scale.y = 0.2;
-            waypoint_marker.scale.z = 0.2;
-            waypoint_marker.color.a = 1.0;
+            waypoint_marker.scale.x = 0.3;
+            waypoint_marker.scale.y = 0.3;
+            waypoint_marker.scale.z = 0.3;
+            waypoint_marker.color.a = 1;
             waypoint_marker.color.r = 0.0;
             waypoint_marker.color.g = 0.0;
-            waypoint_marker.color.b = 1.0;
+            waypoint_marker.color.b = 2.0;
             waypoint_marker.pose.position.x = wp.x;
             waypoint_marker.pose.position.y = wp.y;
             waypoint_marker.pose.position.z = wp.z;
@@ -217,11 +229,11 @@ void Visualizador::visualizar_aviones(const atc_sim_ros2::msg::ListaAviones::Sha
             marker_array.markers.push_back(line_strip);
 
         } else {
-            RCLCPP_INFO(this->get_logger(), "El avion %s ha completado su ruta o no tiene waypoints", avion_msg.id.c_str());
+            RCLCPP_INFO(this->get_logger(), "El avion %s ha completado su ruta o no tiene waypoint.s", avion_msg.id.c_str());
         }
        
     }
 
-    RCLCPP_INFO(this->get_logger(), "Recibidos %zu aviones", msg_lista->aviones.size());
+    RCLCPP_INFO(this->get_logger(), "Visualización actualizada en RViz: %zu trayectorias activas.", msg_lista->aviones.size());
     marker_pub_->publish(marker_array);
 }

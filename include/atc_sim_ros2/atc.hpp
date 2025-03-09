@@ -14,6 +14,7 @@
 class ATC : public rclcpp::Node {
     public:
     ATC();
+    ~ATC() override;
 
     struct IntersectionResult {
         double t1, t2;
@@ -38,9 +39,11 @@ class ATC : public rclcpp::Node {
     atc_sim_ros2::msg::ListaAviones::SharedPtr aviones_lista_;
 
     rclcpp::TimerBase::SharedPtr collision_check_timer_;
+    rclcpp::TimerBase::SharedPtr speed_check_timer_;
     rclcpp::TimerBase::SharedPtr route_management_timer_;
 
     void avionesCallback(const atc_sim_ros2::msg::ListaAviones::SharedPtr msg);
+    void checkSpeed(const atc_sim_ros2::msg::ListaAviones::SharedPtr aviones_lista);
     void manageRoutes(const atc_sim_ros2::msg::ListaAviones::SharedPtr lista_aviones);
     void assignRoute(atc_sim_ros2::msg::Flight& avion_msg);
     const std::vector<atc_sim_ros2::msg::Waypoint>& findCircuit(const atc_sim_ros2::msg::Flight& avion_msg);

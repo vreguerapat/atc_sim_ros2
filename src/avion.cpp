@@ -190,7 +190,7 @@ void Avion::update(double delta_time)
 
     if (!reached_waypoint_){
         // Margen de distancia al waypoint
-        double waypoint_threshold = 1;
+        double waypoint_threshold = 2;
         //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Distance to waypoint: %.2f", distance_to_waypoint);
 
         if (distance_to_waypoint < waypoint_threshold) {
@@ -205,7 +205,7 @@ void Avion::update(double delta_time)
             if (waypoints_.empty()) {
                 ruta_completada_ = true;
                 landings_ += 1;
-                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "TOTAL LANDINGS: %d", landings_);
+                RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Aterrizajes completados: %d", landings_);
                 //RCLCPP_INFO(rclcpp::get_logger("avion_logger"), "Avion ID: %s | Ruta completada: %s | Waypoints vacios: %s", id_.c_str(), ruta_completada_ ? "Sí" : "No", waypoints_.empty() ? "Sí" : "No");
         
             }

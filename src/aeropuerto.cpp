@@ -7,6 +7,8 @@
 #include <chrono>
 #include <memory>
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 
 using namespace std::chrono_literals;
@@ -20,12 +22,22 @@ Aeropuerto::Aeropuerto() : Node("aeropuerto")
            
     update_timer_ = this->create_wall_timer( 1s, [this]() { update_airport(0.01); });
 
-    avion_timer_= this->create_wall_timer(30s, [this]() {agregarAvion();});
+    avion_timer_= this->create_wall_timer(30s, [this]() {agregarAvion();}); 
+
+    std::cout << "==========================\n";
+    std::cout << "      NODO AEROPUERTO     \n";
+    std::cout << "==========================\n";
+    std::cout << "Nodo Aeropuerto iniciado correctamente.\n";
+    std::cout << "Esperando la creacón de aviones...\n";
         
 }
 
+Aeropuerto::~Aeropuerto() {
+    RCLCPP_INFO(this->get_logger(), "El nodo Aeropuerto ha finalizado.");
+    RCLCPP_INFO(this->get_logger(), "Número total de aviones simulados: %d", aviones_totales);
+}
+
 void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoint_update) {
-    //RCLCPP_INFO(this->get_logger(), "Recibiendo waypoints para el avion %s", waypoint_update.avion_id.c_str());
     
     // Primero se verifica si la lista de waypoints está vacía para eliminar el avion
     if (waypoint_update.waypoints.empty()) {
@@ -38,7 +50,7 @@ void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoi
                 }
             ), lista_aviones_.end()
         );
-
+    RCLCPP_INFO(this->get_logger(), "%s ha aterrizado con éxito.", waypoint_update.avion_id.c_str());
     //RCLCPP_ERROR(this->get_logger(), "Avion %s eliminado de la lista de aviones", waypoint_update.avion_id.c_str());
     } else {
         for (auto& avion : lista_aviones_) {
@@ -46,7 +58,7 @@ void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoi
             avion.clearWaypoints();
             avion.addWaypoints(waypoint_update.waypoints);
             avion.setSpeed(waypoint_update.speed);
-            //RCLCPP_INFO(this->get_logger(), "Waypoints y velocidad actualizados para el avion %s", avion.getID().c_str());
+            RCLCPP_INFO(this->get_logger(), "Actualizando información de %s...", waypoint_update.avion_id.c_str());
         }
     }
     }
@@ -87,10 +99,11 @@ void Aeropuerto::agregarAvion()
             double target_y = 20.0;
             double bearing = std::atan2(target_y - new_pos_y, target_x - new_pos_x);
             nuevo_avion.setBearing(bearing);
-            RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion. X: %.2f, Y: %.2f", new_pos_x, new_pos_y);
+            RCLCPP_INFO(this->get_logger(), "Se agregó un nuevo avion, %s", nuevo_avion.getID().c_str());
             lista_aviones_.push_back(nuevo_avion);
             aviones_totales += 1;
-            RCLCPP_INFO(this->get_logger(), "TOTAL PLANES: %d", aviones_totales);
+            RCLCPP_INFO(this->get_logger(), "Aviones en el espacio aéreo: %zu", lista_aviones_.size());
+            RCLCPP_INFO(this->get_logger(), "Histórico de aviones en la simulación: %d", aviones_totales);
         } else {
             // Si sigue estando demasiado cerca se intenta de nuevo
             attempts++;
@@ -101,7 +114,7 @@ void Aeropuerto::agregarAvion()
 
     // Si no se encontró una posicion valida en los 10 intentos no se agrega el avion
     if (!position_found) {
-        RCLCPP_WARN(this->get_logger(), "No se pudo encontrar una posicion segura");
+        RCLCPP_WARN(this->get_logger(), "No se pudo encontrar una posicion segura. Conflicto con otro avión en posición inicial.\n");
     }
     
 }
@@ -124,7 +137,11 @@ double Aeropuerto::generateRandomCoordinateX() {
         case 1: // Lado 2 (horizontal superior)
             return -50.0 + static_cast<double>(rand() % 101); // Rango [-50, 50]
         case 2: // Lado 3 (horizontal inferior)
-            return -50.0 + static_cast<double>(rand() % 101); // Rango [-50, 50]
+            if (rand() % 2 == 0) {
+                return -50.0 - static_cast<double>(rand() % 41); // Rango [-50, -10]
+            } else {
+                return 10.0 + static_cast<double>(rand() % 41); // Rango [10, 50]
+            }
         case 3: // Lado 4 (vertical negativo)
             return -45.0 - static_cast<double>(rand() % 6); // Rango [-45, -50]
         default:
@@ -141,7 +158,7 @@ double Aeropuerto::generateRandomCoordinateY() {
         case 1: // Lado 2 (horizontal superior)
             return 40.0 + static_cast<double>(rand() % 6); // Rango [40, 45] 
         case 2: // Lado 3 (horizontal inferior)
-            return -5.0 + static_cast<double>(rand() % 6); // Rango [-5, 0]
+            return -5.0 + static_cast<double>(rand() % 6); // Rango [-5, 0] HACERLO [-10, -5]
         case 3: // Lado 4 (vertical negativo)
             return static_cast<double>(rand() % 41); // Rango [0, 40]
         default: 
@@ -195,10 +212,10 @@ void Aeropuerto::update_airport(double delta_time)
 
         msg_lista.aviones.push_back(avion_msg);
 
-        std::cout << "ID: " << avion_msg.id
+        /*std::cout << "ID: " << avion_msg.id
                     << ", Waypoints: " << avion_msg.waypoints.size()
                     << ", Ruta completada: " << avion_msg.ruta_completada 
-                    << std::endl;  
+                    << std::endl;  */
     }
 
     lista_aviones_publisher_->publish(msg_lista);

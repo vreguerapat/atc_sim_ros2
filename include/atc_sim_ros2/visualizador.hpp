@@ -14,6 +14,7 @@ using namespace std::chrono_literals;
 class Visualizador : public rclcpp::Node{
     public:
         Visualizador();
+        ~Visualizador() override;
 
     private:
         rclcpp::Subscription<atc_sim_ros2::msg::ListaAviones>::SharedPtr aviones_subscriber_;

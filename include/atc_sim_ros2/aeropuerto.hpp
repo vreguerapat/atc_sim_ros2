@@ -14,6 +14,7 @@
 class Aeropuerto : public rclcpp::Node {
     public:
         Aeropuerto();
+        ~Aeropuerto() override;
         void agregarAvion();
         double generateRandomCoordinate();
         double generateRandomCoordinateX();
