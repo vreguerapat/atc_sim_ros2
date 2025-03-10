@@ -709,8 +709,10 @@ void ATC::adjustTrajectory(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg:
             avoidCollision = true;
             RCLCPP_INFO(this->get_logger(), "Conflicto resuelto entre %s y %s.", avion1.id.c_str(), avion2.id.c_str());
         }
-    }
-   
+        
+        
+    } 
+
     // Si no se ha evitado la colision con la velocidad se intenta ajustando la altura
     if (!avoidCollision) {
         if (avion1_near_circuit && !avion1_exit) {
@@ -928,12 +930,14 @@ void ATC::adjustNextWaypoint(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::ms
 
 atc_sim_ros2::msg::Waypoint ATC::createLateralDisplacedWaypoint(atc_sim_ros2::msg::Flight& avion, bool moveRight) {
     atc_sim_ros2::msg::Waypoint wp;
-    double displacement = moveRight ? 1.0 : -1.0; // Desplazamiento lateral de una unidad
+    double displacement = moveRight ? 2.0 : -2.0; // Desplazamiento lateral de una unidad
+    double forward_displacement = 2.0;
     double perpendicular_angle = avion.bearing + M_PI_2;
+    double forward_angle = avion.bearing;
 
     // Cálculo de la nueva posición desplazada lateralmente
-    wp.x = avion.posx + displacement * std::cos(perpendicular_angle);
-    wp.y = avion.posy + displacement * std::sin(perpendicular_angle);
+    wp.x = avion.posx + displacement * std::cos(perpendicular_angle) + forward_displacement * std::cos(forward_angle);
+    wp.y = avion.posy + displacement * std::sin(perpendicular_angle) + forward_displacement * std::sin(forward_angle);
     wp.z = avion.posz;
     return wp;
 }
@@ -961,7 +965,7 @@ void ATC::adjustSpeed(atc_sim_ros2::msg::Flight& avion1, atc_sim_ros2::msg::Flig
     double dz2 = result->z - avion2.posz;
     double distance2 = std::sqrt(dx2 * dx2 + dy2 * dy2 + dz2 * dz2);
 
-    if (distance1 < distance2){
+    if (distance1 > distance2){ //CAMBIAR SIGNO
         //Avion 1 está mas cerca, aumenta velocidad
         avion1.speed = std::min(avion1.speed + speed_adjustment, max_speed);
         avion2.speed = std::max(avion2.speed - speed_adjustment, min_speed);

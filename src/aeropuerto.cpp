@@ -22,7 +22,8 @@ Aeropuerto::Aeropuerto() : Node("aeropuerto")
            
     update_timer_ = this->create_wall_timer( 1s, [this]() { update_airport(0.01); });
 
-    avion_timer_= this->create_wall_timer(30s, [this]() {agregarAvion();}); 
+    avion_timer_= this->create_wall_timer(25s, [this]() {agregarAvion();}); 
+    //agregarAvion();
 
     std::cout << "==========================\n";
     std::cout << "      NODO AEROPUERTO     \n";
@@ -68,10 +69,12 @@ void Aeropuerto::updateWaypoints(const atc_sim_ros2::msg::WaypointUpdate& waypoi
 void Aeropuerto::agregarAvion()
 {
     Avion nuevo_avion;
-
+    
     bool position_found = false;
     int attempts = 0;
+    
     while (!position_found && attempts < 10) {
+        
         // Se genera una nueva posicion aleatoria para el avion
         double new_pos_x = generateRandomCoordinateX();
         double new_pos_y = generateRandomCoordinateY();
@@ -109,13 +112,13 @@ void Aeropuerto::agregarAvion()
             attempts++;
             RCLCPP_WARN(this->get_logger(), "Posicion no segura, intentando nuevamente...");
         }
-
-    }
+        
+    } 
 
     // Si no se encontró una posicion valida en los 10 intentos no se agrega el avion
     if (!position_found) {
         RCLCPP_WARN(this->get_logger(), "No se pudo encontrar una posicion segura. Conflicto con otro avión en posición inicial.\n");
-    }
+    } 
     
 }
 
